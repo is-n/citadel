@@ -10,6 +10,7 @@ SRC_URI = "https://download.gnome.org/teams/releng/tarballs-needing-help/mozjs/m
            file://0003-Set-rust-host-and-target-correctly.patch \
            file://0004-Do-not-add-RequiredDefines.h-here-instead-add-to-gjs.patch \
            file://0005-Remove-Abort-Panic-Strategy.patch \
+           file://0001-Cannot-use-both-branch-and-rev.patch \
            "
 
 SRC_URI[md5sum] = "09bf510150144238dd31f7f4e1582cf8"
