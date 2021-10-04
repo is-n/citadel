@@ -1,0 +1,3701 @@
+From 8cdf7d5e05a56788db1030cf74698561d4facbf8 Mon Sep 17 00:00:00 2001
+From: Bruce Leidl <bruce@subgraph.com>
+Date: Mon, 4 Oct 2021 07:47:02 -0400
+Subject: [PATCH] Citadel Gnome Shell changes
+
+---
+ data/org.gnome.shell.gschema.xml.in           |   8 +
+ data/theme/gnome-shell-high-contrast.css      |  57 ++-
+ data/theme/gnome-shell-sass/_widgets.scss     |   2 +
+ .../gnome-shell-sass/widgets/_realms.scss     |  17 +
+ data/theme/gnome-shell.css                    |  57 ++-
+ data/theme/meson.build                        |   1 +
+ js/js-resources.gresource.xml                 |   7 +
+ js/ui/main.js                                 |   4 +
+ js/ui/overview.js                             |   2 +-
+ js/ui/overviewControls.js                     |   3 +
+ js/ui/realms/realmIndicator.js                |  37 ++
+ js/ui/realms/realmManager.js                  |  54 +++
+ js/ui/realms/realmSearchProvider.js           | 326 +++++++++++++
+ js/ui/realms/realmSwitcher.js                 | 325 +++++++++++++
+ js/ui/realms/realmWindowFrame.js              | 371 +++++++++++++++
+ js/ui/realms/realmWindowMenu.js               | 113 +++++
+ js/ui/windowManager.js                        |  41 +-
+ js/ui/windowMenu.js                           |  15 +-
+ js/ui/workspacesView.js                       |  12 +
+ src/meson.build                               |   7 +
+ src/shell-app-cache.c                         |   2 +-
+ src/shell-app-system.c                        | 179 ++++++-
+ src/shell-app-system.h                        |   6 +-
+ src/shell-global.c                            |   3 +
+ src/shell-realm-item.c                        | 392 ++++++++++++++++
+ src/shell-realm-item.h                        |  35 ++
+ src/shell-realm-tracker.c                     | 297 ++++++++++++
+ src/shell-realm-tracker.h                     |  14 +
+ src/shell-realms-private.h                    |  21 +
+ src/shell-realms.c                            | 442 ++++++++++++++++++
+ src/shell-realms.h                            |  23 +
+ src/shell-window-tracker.c                    |  43 +-
+ 32 files changed, 2853 insertions(+), 63 deletions(-)
+ create mode 100644 data/theme/gnome-shell-sass/widgets/_realms.scss
+ create mode 100644 js/ui/realms/realmIndicator.js
+ create mode 100644 js/ui/realms/realmManager.js
+ create mode 100644 js/ui/realms/realmSearchProvider.js
+ create mode 100644 js/ui/realms/realmSwitcher.js
+ create mode 100644 js/ui/realms/realmWindowFrame.js
+ create mode 100644 js/ui/realms/realmWindowMenu.js
+ create mode 100644 src/shell-realm-item.c
+ create mode 100644 src/shell-realm-item.h
+ create mode 100644 src/shell-realm-tracker.c
+ create mode 100644 src/shell-realm-tracker.h
+ create mode 100644 src/shell-realms-private.h
+ create mode 100644 src/shell-realms.c
+ create mode 100644 src/shell-realms.h
+
+diff --git a/data/org.gnome.shell.gschema.xml.in b/data/org.gnome.shell.gschema.xml.in
+index cd6a235..a4c9e74 100644
+--- a/data/org.gnome.shell.gschema.xml.in
++++ b/data/org.gnome.shell.gschema.xml.in
+@@ -238,6 +238,14 @@
+       <default>["&lt;Super&gt;9"]</default>
+       <summary>Switch to application 9</summary>
+     </key>
++    <key name="switch-realm" type="as">
++      <default>["&lt;Primary&gt;Tab"]</default>
++      <summary>Open Realm Switcher</summary>
++    </key>
++    <key name="switch-realm-backward" type="as">
++      <default>["&lt;Shift&gt;&lt;Primary&gt;Tab"]</default>
++      <summary>Open Realm Switcher Backwards</summary>
++    </key>
+   </schema>
+ 
+   <schema id="org.gnome.shell.app-switcher"
+diff --git a/data/theme/gnome-shell-high-contrast.css b/data/theme/gnome-shell-high-contrast.css
+index 4462b15..a18028a 100644
+--- a/data/theme/gnome-shell-high-contrast.css
++++ b/data/theme/gnome-shell-high-contrast.css
+@@ -28,7 +28,7 @@ stage {
+   font-weight: bold;
+   color: #eeeeec; }
+ 
+-.workspace-switcher-container, .switcher-list, .resize-popup, .osd-window {
++.osd-window, .resize-popup, .switcher-list, .workspace-switcher-container {
+   color: #eeeeec;
+   background-color: #2e3436;
+   border-radius: 20px;
+@@ -38,8 +38,8 @@ stage {
+   color: #eeeeec;
+   background-color: rgba(238, 238, 236, 0.1); }
+ 
+-.app-well-app .overview-icon,
+-.grid-search-result .overview-icon, .show-apps .overview-icon, .list-search-result, .search-provider-icon {
++.search-provider-icon, .list-search-result, .show-apps .overview-icon, .app-well-app .overview-icon,
++.grid-search-result .overview-icon {
+   border-radius: 12px;
+   padding: 6px;
+   border: 2px solid transparent;
+@@ -51,7 +51,7 @@ stage {
+   background-color: #000;
+   border: 1px solid black; }
+ 
+-.app-folder-dialog .folder-name-container .edit-folder-button, .button {
++.button, .app-folder-dialog .folder-name-container .edit-folder-button {
+   border-radius: 8px;
+   border-style: solid;
+   border-width: 1px;
+@@ -63,26 +63,26 @@ stage {
+   box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.1);
+   text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+   icon-shadow: 0 1px rgba(0, 0, 0, 0.2); }
+-  .app-folder-dialog .folder-name-container .edit-folder-button:focus, .button:focus {
++  .button:focus, .app-folder-dialog .folder-name-container .edit-folder-button:focus {
+     color: #fff;
+     text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     icon-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     box-shadow: inset 0 0 0 2px rgba(33, 93, 156, 0.6); }
+-  .app-folder-dialog .folder-name-container .edit-folder-button:hover, .button:hover {
++  .button:hover, .app-folder-dialog .folder-name-container .edit-folder-button:hover {
+     color: #fff;
+     background-color: #0d0d0d;
+     border-color: black;
+     box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.1);
+     text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     icon-shadow: 0 1px rgba(0, 0, 0, 0.2); }
+-  .app-folder-dialog .folder-name-container .edit-folder-button:insensitive, .button:insensitive {
++  .button:insensitive, .app-folder-dialog .folder-name-container .edit-folder-button:insensitive {
+     color: gray;
+     border-color: black;
+     background-color: #0e0e0e;
+     box-shadow: none;
+     text-shadow: none;
+     icon-shadow: none; }
+-  .app-folder-dialog .folder-name-container .edit-folder-button:active, .button:active {
++  .button:active, .app-folder-dialog .folder-name-container .edit-folder-button:active {
+     color: #fff;
+     background-color: black;
+     border-color: black;
+@@ -90,7 +90,7 @@ stage {
+     icon-shadow: none;
+     box-shadow: none; }
+ 
+-.modal-dialog .modal-dialog-linked-button, .hotplug-notification-item, .notification-banner .notification-button {
++.notification-banner .notification-button, .hotplug-notification-item, .modal-dialog .modal-dialog-linked-button {
+   color: #fff;
+   background-color: #080808;
+   border-color: black;
+@@ -102,38 +102,38 @@ stage {
+   border-width: 1px;
+   border-left-width: 0;
+   border-bottom-width: 0; }
+-  .modal-dialog .modal-dialog-linked-button:insensitive, .hotplug-notification-item:insensitive, .notification-banner .notification-button:insensitive {
++  .notification-banner .notification-button:insensitive, .hotplug-notification-item:insensitive, .modal-dialog .modal-dialog-linked-button:insensitive {
+     color: gray;
+     border-color: black;
+     background-color: #0e0e0e;
+     box-shadow: none;
+     text-shadow: none;
+     icon-shadow: none; }
+-  .modal-dialog .modal-dialog-linked-button:hover, .hotplug-notification-item:hover, .notification-banner .notification-button:hover {
++  .notification-banner .notification-button:hover, .hotplug-notification-item:hover, .modal-dialog .modal-dialog-linked-button:hover {
+     color: #fff;
+     background-color: #0d0d0d;
+     border-color: black;
+     box-shadow: none;
+     text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     icon-shadow: 0 1px rgba(0, 0, 0, 0.2); }
+-  .modal-dialog .modal-dialog-linked-button:focus, .hotplug-notification-item:focus, .notification-banner .notification-button:focus {
++  .notification-banner .notification-button:focus, .hotplug-notification-item:focus, .modal-dialog .modal-dialog-linked-button:focus {
+     color: #fff;
+     text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     icon-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     box-shadow: inset 0 0 0 2px rgba(33, 93, 156, 0.6); }
+-  .modal-dialog .modal-dialog-linked-button:active, .hotplug-notification-item:active, .notification-banner .notification-button:active {
++  .notification-banner .notification-button:active, .hotplug-notification-item:active, .modal-dialog .modal-dialog-linked-button:active {
+     color: #fff;
+     background-color: black;
+     border-color: black;
+     text-shadow: none;
+     icon-shadow: none;
+     box-shadow: none; }
+-  .modal-dialog .modal-dialog-linked-button:first-child, .hotplug-notification-item:first-child, .notification-banner .notification-button:first-child {
++  .notification-banner .notification-button:first-child, .hotplug-notification-item:first-child, .modal-dialog .modal-dialog-linked-button:first-child {
+     border-radius: 0 0 0 14px; }
+-  .modal-dialog .modal-dialog-linked-button:last-child, .hotplug-notification-item:last-child, .notification-banner .notification-button:last-child {
++  .notification-banner .notification-button:last-child, .hotplug-notification-item:last-child, .modal-dialog .modal-dialog-linked-button:last-child {
+     border-right-width: 0;
+     border-radius: 0 0 14px 0; }
+-  .modal-dialog .modal-dialog-linked-button:first-child:last-child, .hotplug-notification-item:first-child:last-child, .notification-banner .notification-button:first-child:last-child {
++  .notification-banner .notification-button:first-child:last-child, .hotplug-notification-item:first-child:last-child, .modal-dialog .modal-dialog-linked-button:first-child:last-child {
+     border-radius: 0 0 14px 14px; }
+ 
+ /* WIDGETS */
+@@ -1373,11 +1373,11 @@ StScrollBar {
+   padding: 18px;
+   spacing: 8px; }
+ 
+-.list-search-result:focus, .search-provider-icon:focus, .list-search-result:hover, .search-provider-icon:hover, .list-search-result:selected, .search-provider-icon:selected {
++.search-provider-icon:focus, .list-search-result:focus, .search-provider-icon:hover, .list-search-result:hover, .search-provider-icon:selected, .list-search-result:selected {
+   background-color: rgba(238, 238, 236, 0.1);
+   transition-duration: 200ms; }
+ 
+-.list-search-result:active, .search-provider-icon:active, .list-search-result:checked, .search-provider-icon:checked {
++.search-provider-icon:active, .list-search-result:active, .search-provider-icon:checked, .list-search-result:checked {
+   background-color: rgba(23, 25, 26, 0.9); }
+ 
+ .grid-search-results {
+@@ -1514,7 +1514,8 @@ StScrollBar {
+     padding: 24px 36px 0;
+     spacing: 12px;
+     /* FIXME: this is to keep the label in sync with the entry */ }
+-    .app-folder-dialog .folder-name-container .folder-name-label, .app-folder-dialog .folder-name-container .folder-name-entry {
++    .app-folder-dialog .folder-name-container .folder-name-label,
++    .app-folder-dialog .folder-name-container .folder-name-entry {
+       font-size: 18pt;
+       font-weight: 800; }
+     .app-folder-dialog .folder-name-container .folder-name-entry {
+@@ -2067,7 +2068,8 @@ StScrollBar {
+ 
+ .login-dialog-not-listed-label {
+   padding-left: 2px; }
+-  .login-dialog-not-listed-button:focus .login-dialog-not-listed-label, .login-dialog-not-listed-button:hover .login-dialog-not-listed-label {
++  .login-dialog-not-listed-button:focus .login-dialog-not-listed-label,
++  .login-dialog-not-listed-button:hover .login-dialog-not-listed-label {
+     color: #eeeeec; }
+ 
+ .login-dialog-not-listed-label {
+@@ -2202,6 +2204,21 @@ StScrollBar {
+   #unlockDialogNotifications StButton#vhandle:active, #unlockDialogNotifications StButton#hhandle:active {
+     background-color: rgba(33, 93, 156, 0.5); }
+ 
++.realm-switch-label {
++  font-size: 36px;
++  font-weight: bold;
++  color: #ffffff;
++  background-color: rgba(10, 10, 10, 0.7);
++  border-radius: 5px;
++  padding: .5em; }
++
++.realm-frame-label {
++  font-size: 12pt;
++  font-weight: bold; }
++
++.realm-config-icon {
++  color: #8e8e80; }
++
+ stage {
+   -st-icon-style: symbolic; }
+ 
+diff --git a/data/theme/gnome-shell-sass/_widgets.scss b/data/theme/gnome-shell-sass/_widgets.scss
+index a8d0aa9..d50295d 100644
+--- a/data/theme/gnome-shell-sass/_widgets.scss
++++ b/data/theme/gnome-shell-sass/_widgets.scss
+@@ -49,3 +49,5 @@
+ // Lock / login screens
+ @import 'widgets/login-dialog';
+ @import 'widgets/screen-shield';
++
++@import 'widgets/realms';
+diff --git a/data/theme/gnome-shell-sass/widgets/_realms.scss b/data/theme/gnome-shell-sass/widgets/_realms.scss
+new file mode 100644
+index 0000000..49a824c
+--- /dev/null
++++ b/data/theme/gnome-shell-sass/widgets/_realms.scss
+@@ -0,0 +1,17 @@
++.realm-switch-label {
++  font-size: 36px;
++  font-weight: bold;
++  color: #ffffff;
++  background-color: rgba(10, 10, 10, 0.7);
++  border-radius: 5px;
++  padding: .5em;
++}
++
++.realm-frame-label {
++  font-size: 12pt;
++  font-weight: bold;
++}
++
++.realm-config-icon {
++  color: #8e8e80;
++}
+\ No newline at end of file
+diff --git a/data/theme/gnome-shell.css b/data/theme/gnome-shell.css
+index 332c70e..da2812b 100644
+--- a/data/theme/gnome-shell.css
++++ b/data/theme/gnome-shell.css
+@@ -28,7 +28,7 @@ stage {
+   font-weight: bold;
+   color: #eeeeec; }
+ 
+-.workspace-switcher-container, .switcher-list, .resize-popup, .osd-window {
++.osd-window, .resize-popup, .switcher-list, .workspace-switcher-container {
+   color: #eeeeec;
+   background-color: rgba(32, 32, 32, 0.96);
+   border-radius: 20px;
+@@ -38,8 +38,8 @@ stage {
+   color: #eeeeec;
+   background-color: rgba(238, 238, 236, 0.1); }
+ 
+-.app-well-app .overview-icon,
+-.grid-search-result .overview-icon, .show-apps .overview-icon, .list-search-result, .search-provider-icon {
++.search-provider-icon, .list-search-result, .show-apps .overview-icon, .app-well-app .overview-icon,
++.grid-search-result .overview-icon {
+   border-radius: 12px;
+   padding: 6px;
+   border: 2px solid transparent;
+@@ -51,7 +51,7 @@ stage {
+   background-color: #353535;
+   border: 1px solid #202020; }
+ 
+-.app-folder-dialog .folder-name-container .edit-folder-button, .button {
++.button, .app-folder-dialog .folder-name-container .edit-folder-button {
+   border-radius: 8px;
+   border-style: solid;
+   border-width: 1px;
+@@ -63,26 +63,26 @@ stage {
+   box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.2);
+   text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+   icon-shadow: 0 1px rgba(0, 0, 0, 0.2); }
+-  .app-folder-dialog .folder-name-container .edit-folder-button:focus, .button:focus {
++  .button:focus, .app-folder-dialog .folder-name-container .edit-folder-button:focus {
+     color: #eeeeec;
+     text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     icon-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     box-shadow: inset 0 0 0 2px rgba(27, 106, 203, 0.6); }
+-  .app-folder-dialog .folder-name-container .edit-folder-button:hover, .button:hover {
++  .button:hover, .app-folder-dialog .folder-name-container .edit-folder-button:hover {
+     color: #eeeeec;
+     background-color: #424242;
+     border-color: #2b2b2b;
+     box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.2);
+     text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     icon-shadow: 0 1px rgba(0, 0, 0, 0.2); }
+-  .app-folder-dialog .folder-name-container .edit-folder-button:insensitive, .button:insensitive {
++  .button:insensitive, .app-folder-dialog .folder-name-container .edit-folder-button:insensitive {
+     color: #919190;
+     border-color: #252526;
+     background-color: #323132;
+     box-shadow: none;
+     text-shadow: none;
+     icon-shadow: none; }
+-  .app-folder-dialog .folder-name-container .edit-folder-button:active, .button:active {
++  .button:active, .app-folder-dialog .folder-name-container .edit-folder-button:active {
+     color: #eeeeec;
+     background-color: #2d2d2d;
+     border-color: #191919;
+@@ -90,7 +90,7 @@ stage {
+     icon-shadow: none;
+     box-shadow: none; }
+ 
+-.modal-dialog .modal-dialog-linked-button, .hotplug-notification-item, .notification-banner .notification-button {
++.notification-banner .notification-button, .hotplug-notification-item, .modal-dialog .modal-dialog-linked-button {
+   color: #eeeeec;
+   background-color: #3c3c3c;
+   border-color: #2b2b2b;
+@@ -102,38 +102,38 @@ stage {
+   border-width: 1px;
+   border-left-width: 0;
+   border-bottom-width: 0; }
+-  .modal-dialog .modal-dialog-linked-button:insensitive, .hotplug-notification-item:insensitive, .notification-banner .notification-button:insensitive {
++  .notification-banner .notification-button:insensitive, .hotplug-notification-item:insensitive, .modal-dialog .modal-dialog-linked-button:insensitive {
+     color: #919190;
+     border-color: #252526;
+     background-color: #323132;
+     box-shadow: none;
+     text-shadow: none;
+     icon-shadow: none; }
+-  .modal-dialog .modal-dialog-linked-button:hover, .hotplug-notification-item:hover, .notification-banner .notification-button:hover {
++  .notification-banner .notification-button:hover, .hotplug-notification-item:hover, .modal-dialog .modal-dialog-linked-button:hover {
+     color: #eeeeec;
+     background-color: #424242;
+     border-color: #2b2b2b;
+     box-shadow: none;
+     text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     icon-shadow: 0 1px rgba(0, 0, 0, 0.2); }
+-  .modal-dialog .modal-dialog-linked-button:focus, .hotplug-notification-item:focus, .notification-banner .notification-button:focus {
++  .notification-banner .notification-button:focus, .hotplug-notification-item:focus, .modal-dialog .modal-dialog-linked-button:focus {
+     color: #eeeeec;
+     text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     icon-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     box-shadow: inset 0 0 0 2px rgba(27, 106, 203, 0.6); }
+-  .modal-dialog .modal-dialog-linked-button:active, .hotplug-notification-item:active, .notification-banner .notification-button:active {
++  .notification-banner .notification-button:active, .hotplug-notification-item:active, .modal-dialog .modal-dialog-linked-button:active {
+     color: #eeeeec;
+     background-color: #2d2d2d;
+     border-color: #191919;
+     text-shadow: none;
+     icon-shadow: none;
+     box-shadow: none; }
+-  .modal-dialog .modal-dialog-linked-button:first-child, .hotplug-notification-item:first-child, .notification-banner .notification-button:first-child {
++  .notification-banner .notification-button:first-child, .hotplug-notification-item:first-child, .modal-dialog .modal-dialog-linked-button:first-child {
+     border-radius: 0 0 0 14px; }
+-  .modal-dialog .modal-dialog-linked-button:last-child, .hotplug-notification-item:last-child, .notification-banner .notification-button:last-child {
++  .notification-banner .notification-button:last-child, .hotplug-notification-item:last-child, .modal-dialog .modal-dialog-linked-button:last-child {
+     border-right-width: 0;
+     border-radius: 0 0 14px 0; }
+-  .modal-dialog .modal-dialog-linked-button:first-child:last-child, .hotplug-notification-item:first-child:last-child, .notification-banner .notification-button:first-child:last-child {
++  .notification-banner .notification-button:first-child:last-child, .hotplug-notification-item:first-child:last-child, .modal-dialog .modal-dialog-linked-button:first-child:last-child {
+     border-radius: 0 0 14px 14px; }
+ 
+ /* WIDGETS */
+@@ -1373,11 +1373,11 @@ StScrollBar {
+   padding: 18px;
+   spacing: 8px; }
+ 
+-.list-search-result:focus, .search-provider-icon:focus, .list-search-result:hover, .search-provider-icon:hover, .list-search-result:selected, .search-provider-icon:selected {
++.search-provider-icon:focus, .list-search-result:focus, .search-provider-icon:hover, .list-search-result:hover, .search-provider-icon:selected, .list-search-result:selected {
+   background-color: rgba(238, 238, 236, 0.1);
+   transition-duration: 200ms; }
+ 
+-.list-search-result:active, .search-provider-icon:active, .list-search-result:checked, .search-provider-icon:checked {
++.search-provider-icon:active, .list-search-result:active, .search-provider-icon:checked, .list-search-result:checked {
+   background-color: rgba(7, 7, 7, 0.86); }
+ 
+ .grid-search-results {
+@@ -1514,7 +1514,8 @@ StScrollBar {
+     padding: 24px 36px 0;
+     spacing: 12px;
+     /* FIXME: this is to keep the label in sync with the entry */ }
+-    .app-folder-dialog .folder-name-container .folder-name-label, .app-folder-dialog .folder-name-container .folder-name-entry {
++    .app-folder-dialog .folder-name-container .folder-name-label,
++    .app-folder-dialog .folder-name-container .folder-name-entry {
+       font-size: 18pt;
+       font-weight: 800; }
+     .app-folder-dialog .folder-name-container .folder-name-entry {
+@@ -2067,7 +2068,8 @@ StScrollBar {
+ 
+ .login-dialog-not-listed-label {
+   padding-left: 2px; }
+-  .login-dialog-not-listed-button:focus .login-dialog-not-listed-label, .login-dialog-not-listed-button:hover .login-dialog-not-listed-label {
++  .login-dialog-not-listed-button:focus .login-dialog-not-listed-label,
++  .login-dialog-not-listed-button:hover .login-dialog-not-listed-label {
+     color: #eeeeec; }
+ 
+ .login-dialog-not-listed-label {
+@@ -2201,3 +2203,18 @@ StScrollBar {
+     background-color: rgba(53, 53, 53, 0.5); }
+   #unlockDialogNotifications StButton#vhandle:active, #unlockDialogNotifications StButton#hhandle:active {
+     background-color: rgba(27, 106, 203, 0.5); }
++
++.realm-switch-label {
++  font-size: 36px;
++  font-weight: bold;
++  color: #ffffff;
++  background-color: rgba(10, 10, 10, 0.7);
++  border-radius: 5px;
++  padding: .5em; }
++
++.realm-frame-label {
++  font-size: 12pt;
++  font-weight: bold; }
++
++.realm-config-icon {
++  color: #8e8e80; }
+diff --git a/data/theme/meson.build b/data/theme/meson.build
+index 87112c3..9cec069 100644
+--- a/data/theme/meson.build
++++ b/data/theme/meson.build
+@@ -29,6 +29,7 @@ theme_sources = files([
+   'gnome-shell-sass/widgets/_overview.scss',
+   'gnome-shell-sass/widgets/_panel.scss',
+   'gnome-shell-sass/widgets/_popovers.scss',
++  'gnome-shell-sass/widgets/_realms.scss',
+   'gnome-shell-sass/widgets/_screen-shield.scss',
+   'gnome-shell-sass/widgets/_scrollbars.scss',
+   'gnome-shell-sass/widgets/_search-entry.scss',
+diff --git a/js/js-resources.gresource.xml b/js/js-resources.gresource.xml
+index e65e0e9..3516b6c 100644
+--- a/js/js-resources.gresource.xml
++++ b/js/js-resources.gresource.xml
+@@ -139,5 +139,12 @@
+     <file>ui/status/remoteAccess.js</file>
+     <file>ui/status/system.js</file>
+     <file>ui/status/thunderbolt.js</file>
++
++    <file>ui/realms/realmIndicator.js</file>
++    <file>ui/realms/realmManager.js</file>
++    <file>ui/realms/realmSearchProvider.js</file>
++    <file>ui/realms/realmSwitcher.js</file>
++    <file>ui/realms/realmWindowFrame.js</file>
++    <file>ui/realms/realmWindowMenu.js</file>
+   </gresource>
+ </gresources>
+diff --git a/js/ui/main.js b/js/ui/main.js
+index bf7b6ac..963ec8d 100644
+--- a/js/ui/main.js
++++ b/js/ui/main.js
+@@ -49,6 +49,7 @@ const PointerA11yTimeout = imports.ui.pointerA11yTimeout;
+ const ParentalControlsManager = imports.misc.parentalControlsManager;
+ const Config = imports.misc.config;
+ const Util = imports.misc.util;
++const RealmManager = imports.ui.realms.realmManager;
+ 
+ const WELCOME_DIALOG_LAST_SHOWN_VERSION = 'welcome-dialog-last-shown-version';
+ // Make sure to mention the point release, otherwise it will show every time
+@@ -91,6 +92,7 @@ var kbdA11yDialog = null;
+ var inputMethod = null;
+ var introspectService = null;
+ var locatePointer = null;
++var realmManager = null;
+ let _startDate;
+ let _defaultCssStylesheet = null;
+ let _cssStylesheet = null;
+@@ -268,6 +270,8 @@ function _initializeUI() {
+     extensionManager = new ExtensionSystem.ExtensionManager();
+     extensionManager.init();
+ 
++    realmManager = new RealmManager.RealmManager();
++
+     if (sessionMode.isGreeter && screenShield) {
+         layoutManager.connect('startup-prepared', () => {
+             screenShield.showDialog();
+diff --git a/js/ui/overview.js b/js/ui/overview.js
+index 75fe6e1..a716cad 100644
+--- a/js/ui/overview.js
++++ b/js/ui/overview.js
+@@ -258,7 +258,7 @@ var Overview = class {
+         DND.addDragMonitor(this._dragMonitor);
+         // Remember the workspace we started from
+         let workspaceManager = global.workspace_manager;
+-        this._lastActiveWorkspaceIndex = workspaceManager.get_active_workspace_index();
++        this._lastActiveWorkspaceIndex = workspaceManager.get_active_workspace_id();
+     }
+ 
+     _onDragEnd(time) {
+diff --git a/js/ui/overviewControls.js b/js/ui/overviewControls.js
+index a897403..9eb8ca8 100644
+--- a/js/ui/overviewControls.js
++++ b/js/ui/overviewControls.js
+@@ -336,6 +336,8 @@ class ControlsManager extends St.Widget {
+             workspaceManager.connect('notify::n-workspaces',
+                 this._updateAdjustment.bind(this));
+ 
++        this._contextSwitchedId = workspaceManager.connect('context-switched', this._updateAdjustment.bind(this));
++
+         this._searchController = new SearchController.SearchController(
+             this._searchEntry,
+             this.dash.showAppsButton);
+@@ -629,6 +631,7 @@ class ControlsManager extends St.Widget {
+ 
+     _onDestroy() {
+         global.workspace_manager.disconnect(this._nWorkspacesNotifyId);
++        global.workspace_manager.disconnect(this._contextSwitchedId);
+     }
+ 
+     _updateAdjustment() {
+diff --git a/js/ui/realms/realmIndicator.js b/js/ui/realms/realmIndicator.js
+new file mode 100644
+index 0000000..d71e346
+--- /dev/null
++++ b/js/ui/realms/realmIndicator.js
+@@ -0,0 +1,37 @@
++const { Clutter, GObject, Shell, St } = imports.gi;
++const PanelMenu = imports.ui.panelMenu;
++
++var RealmPanelIndicator = GObject.registerClass(
++class RealmPanelIndicator extends PanelMenu.Button {
++        _init() {
++            super._init(0.5, "Current Realm");
++
++            this._label = new St.Label({
++                style_class: 'current-realm-label',
++                y_align: Clutter.ActorAlign.CENTER
++            });
++            this.add_child(this._label);
++
++            this.update();
++        }
++
++        clear() {
++            this._label.set_text('');
++        }
++
++        update() {
++            let realm_name = '';
++            const realms = Shell.Realms.get_default();
++            let current = realms.current_realm;
++            if (current) {
++                realm_name = current.realm_name;
++                this._label.set_text(`realm-${realm_name}`);
++            }
++
++            if (realm_name.length > 0) {
++                this._label.set_text(`realm-${realm_name}`);
++            } else {
++                this._label.set_text('');
++            }
++        }
++    });
+diff --git a/js/ui/realms/realmManager.js b/js/ui/realms/realmManager.js
+new file mode 100644
+index 0000000..0432190
+--- /dev/null
++++ b/js/ui/realms/realmManager.js
+@@ -0,0 +1,54 @@
++const { Clutter, Gio, Meta, Shell, St } = imports.gi;
++
++const Main = imports.ui.main;
++const RealmIndicator = imports.ui.realms.realmIndicator;
++const RealmSwitcher = imports.ui.realms.realmSwitcher;
++const Lightbox = imports.ui.lightbox;
++const RealmSearchProvider = imports.ui.realms.realmSearchProvider;
++const RealmWindowFrame = imports.ui.realms.realmWindowFrame;
++
++var RealmManager = class {
++    constructor() {
++
++        this._realmIndicator = new RealmIndicator.RealmPanelIndicator();
++        Main.panel.addToStatusArea('RealmIndicator', this._realmIndicator);
++
++        this._switchAction = Main.wm.addKeybinding('switch-realm',
++            new Gio.Settings({ schema_id: "org.gnome.shell.keybindings"}),
++            Meta.KeyBindingFlags.NONE,
++            Shell.ActionMode.NORMAL,
++            this._switchRealms.bind(this));
++
++        this._switchActionBackward = Main.wm.addKeybinding('switch-realm-backward',
++            new Gio.Settings({ schema_id: "org.gnome.shell.keybindings"}),
++            Meta.KeyBindingFlags.IS_REVERSED,
++            Shell.ActionMode.NORMAL,
++            this._switchRealms.bind(this));
++
++        const realms = Shell.Realms.get_default();
++        realms.connect('realm-context-switched', () => {
++            Main.overview.dash._queueRedisplay();
++        });
++
++        this._switchAnimation = new RealmSwitcher.ContextSwitchAnimationController(this._realmIndicator);
++
++        this._searchResults = Main.overview._overview.controls._searchController._searchResults;
++        this._searchProvider = new RealmSearchProvider.RealmSearchProvider();
++        this._searchProvider.createResultDisplay(this._searchResults);
++        this._searchResults._registerProvider(this._searchProvider);
++
++        this._frameManager = new RealmWindowFrame.WindowFrameManager();
++    }
++
++    animateSwitch(from, to, onComplete) {
++        this._switchAnimation.animateSwitch(from, to, onComplete);
++    }
++
++    _switchRealms(display, window, binding) {
++        let popup = new RealmSwitcher.SwitchRealmPopup(this._switchAction, this._switchActionBackward);
++        if (!popup.show(binding.is_reversed(), binding.get_name(), binding.get_mask()))
++            popup.fadeAndDestroy();
++    }
++
++};
++
+diff --git a/js/ui/realms/realmSearchProvider.js b/js/ui/realms/realmSearchProvider.js
+new file mode 100644
+index 0000000..00ad04d
+--- /dev/null
++++ b/js/ui/realms/realmSearchProvider.js
+@@ -0,0 +1,326 @@
++const { Clutter, GObject, Pango, Shell, St } = imports.gi;
++
++const Search = imports.ui.search;
++const Main = imports.ui.main;
++const Util = imports.misc.util;
++
++// Based on ProviderInfo in search.js
++var RealmProviderInfo = GObject.registerClass(
++class RealmProviderInfo extends St.Button {
++    _init() {
++        super._init({
++            style_class: 'search-provider-icon',
++            reactive: false,
++            can_focus: false,
++            accessible_name: "Realms",
++            track_hover: false,
++            y_align: Clutter.ActorAlign.START,
++        });
++
++        this._content = new St.BoxLayout({ vertical: false,
++            style_class: 'list-search-provider-content' });
++        this.set_child(this._content);
++
++        let icon = new St.Icon({ icon_size: this.PROVIDER_ICON_SIZE,
++            icon_name: 'computer' });
++
++        let detailsBox = new St.BoxLayout({ style_class: 'list-search-provider-details',
++            vertical: true,
++            x_expand: true });
++
++        let nameLabel = new St.Label({
++            text: "Realms",
++            x_align: Clutter.ActorAlign.START
++        });
++
++        this._moreLabel = new St.Label({ x_align: Clutter.ActorAlign.START });
++
++        detailsBox.add_actor(nameLabel);
++        detailsBox.add_actor(this._moreLabel);
++
++
++        this._content.add_actor(icon);
++        this._content.add_actor(detailsBox);
++    }
++
++    get PROVIDER_ICON_SIZE() {
++        return 48;
++    }
++
++    setMoreCount(count) {
++        this._moreLabel.text = ngettext("%d more", "%d more", count).format(count);
++        this._moreLabel.visible = count > 0;
++    }
++});
++
++var MAX_LIST_SEARCH_RESULTS_ROWS = 10;
++
++// Based on ListSearchResult in search.js
++var RealmSearchResult = GObject.registerClass(
++class ListSearchResult extends Search.SearchResult {
++    _init(provider, metaInfo, resultsView) {
++        super._init(provider, metaInfo, resultsView);
++
++        this.style_class = 'list-search-result';
++
++        let content = new St.BoxLayout({
++            style_class: 'list-search-result-content',
++            vertical: false,
++            x_align: Clutter.ActorAlign.FILL,
++            x_expand: true,
++            y_expand: true,
++        });
++        this.set_child(content);
++
++        this._termsChangedId = 0;
++
++        let titleBox = new St.BoxLayout({
++            style_class: 'list-search-result-title',
++            y_align: Clutter.ActorAlign.CENTER,
++        });
++
++        content.add_child(titleBox);
++
++        // An icon for, or thumbnail of, content
++        let icon = this.metaInfo['createIcon'](this.ICON_SIZE);
++        if (icon)
++            titleBox.add(icon);
++
++        let title = new St.Label({
++            text: this.metaInfo['name'],
++            y_align: Clutter.ActorAlign.CENTER,
++        });
++        titleBox.add_child(title);
++
++        this.label_actor = title;
++
++        if (this.metaInfo['description']) {
++            this._descriptionLabel = new St.Label({
++                style_class: 'list-search-result-description',
++                x_expand: true,
++                x_align: Clutter.ActorAlign.START,
++                y_align: Clutter.ActorAlign.CENTER,
++            });
++            this._descriptionLabel.clutter_text.ellipsize = Pango.EllipsizeMode.NONE;
++            content.add_child(this._descriptionLabel);
++
++            this._termsChangedId =
++                this._resultsView.connect('terms-changed',
++                    this._highlightTerms.bind(this));
++
++            this._highlightTerms();
++        }
++
++        let id = this.metaInfo['id'];
++
++        if (id != ':new:') {
++            this.configButton = new St.Button({
++                style_class: 'button',
++                track_hover: true,
++                can_focus: true,
++                child: new St.Icon({
++                    style_class: 'realm-config-icon',
++                    icon_name: 'emblem-system-symbolic',
++                    icon_size: 24,
++                }),
++            });
++
++            this.configButton.connect('clicked', () => {
++                Main.overview.toggle();
++                Util.spawn(['/usr/libexec/realm-config-ui', id]);
++            });
++            content.add_child(this.configButton);
++        }
++
++        this.connect('destroy', this._onDestroy.bind(this));
++    }
++
++    get ICON_SIZE() {
++        return 24;
++    }
++
++    _highlightTerms() {
++        let markup = this._resultsView.highlightTerms(this.metaInfo['description'].split('\n')[0]);
++        this._descriptionLabel.clutter_text.set_markup(markup);
++    }
++
++    _onDestroy() {
++        if (this._termsChangedId)
++            this._resultsView.disconnect(this._termsChangedId);
++        this._termsChangedId = 0;
++    }
++});
++
++// Based on ListSearchResults in search.js
++var RealmSearchResults = GObject.registerClass(
++class RealmSearchResults extends Search.SearchResultsBase {
++    _init(provider, resultsView) {
++        super._init(provider, resultsView);
++
++        this._container = new St.BoxLayout({ style_class: 'search-section-content' });
++        this.providerInfo = new RealmProviderInfo();
++        this.providerInfo.connect('key-focus-in', this._keyFocusIn.bind(this));
++        this.providerInfo.connect('clicked', () => {
++            Main.overview.toggle();
++        });
++
++        this._container.add_child(this.providerInfo);
++
++        this._content = new St.BoxLayout({
++            style_class: 'list-search-results',
++            vertical: true,
++            x_expand: true,
++        });
++        this._container.add_child(this._content);
++
++        this._resultDisplayBin.set_child(this._container);
++    }
++
++    _setMoreCount(count) {
++        this.providerInfo.setMoreCount(count);
++    }
++
++    _getMaxDisplayedResults() {
++        return MAX_LIST_SEARCH_RESULTS_ROWS;
++    }
++
++    _clearResultDisplay() {
++        this._content.remove_all_children();
++    }
++
++    _createResultDisplay(meta) {
++        return super._createResultDisplay(meta) ||
++            new RealmSearchResult(this.provider, meta, this._resultsView);
++    }
++
++    _addItem(display) {
++        this._content.add_actor(display);
++    }
++
++    getFirstResult() {
++        if (this._content.get_n_children() > 0)
++            return this._content.get_child_at_index(0);
++        else
++            return null;
++    }
++
++});
++
++var RealmSearchProvider = class RealmSearchProvider {
++    constructor() {
++        this._shellRealms = Shell.Realms.get_default();
++        this.id = 'realms';
++        this.isRemoteProvider = false;
++        this.canLaunchSearch = false;
++        this.display = null;
++    }
++
++    createResultDisplay(resultsView) {
++        this.display = new RealmSearchResults(this, resultsView);
++        this.display.connect('notify::focus-child', resultsView._focusChildChanged.bind(resultsView));
++        this.display.hide();
++        resultsView._content.add(this.display);
++    }
++
++    createIcon(size, realm) {
++        if (realm.is_running()) {
++            return new St.Icon({ icon_name: 'emblem-synchronizing', icon_size: size });
++        } else {
++            return new St.Icon({ icon_name: 'exaile', icon_size: size });
++        }
++    }
++
++    createRealmMeta(realm) {
++        let id = realm.get_realm_name();
++        let description = '';
++        if (realm.is_running()) {
++            description = `Set realm-${id} as current realm`;
++        } else {
++            description = `Start realm-${id}`;
++        }
++
++        return {
++            id: id,
++            name: `realm-${id}`,
++            description: description,
++            createIcon: size => {
++                return this.createIcon(size, realm);
++            },
++        };
++    }
++
++    createNewRealmMeta() {
++        return {
++            id: ':new:',
++            name: 'New Realm',
++            description: 'Create a new realm',
++            createIcon: size => {
++                return new St.Icon({
++                    icon_name: 'computer',
++                    icon_size: size,
++                });
++            }
++        }
++    }
++
++    getResultMetas (ids, callback) {
++        let metas = [];
++
++        for (let id of ids) {
++            if (id == ":new:") {
++                metas.push(this.createNewRealmMeta());
++            } else {
++                let realm = this._shellRealms.realm_by_name(id);
++                if (realm && !realm.is_current()) {
++                    metas.push(this.createRealmMeta(realm));
++                } else {
++                    log(`No realm found for ${id}`);
++                }
++            }
++        }
++        callback(metas);
++    }
++
++    activateResult (resultId, _terms) {
++
++        if (resultId == ':new:') {
++            Main.overview.toggle();
++            Util.spawn(['/usr/libexec/realm-config-ui', '--new']);
++            return;
++        }
++
++        let realm = this._shellRealms.realm_by_name(resultId);
++        if (realm) {
++           realm.set_current();
++        } else {
++            log(`No realm found for ${resultId}`);
++        }
++    }
++
++    filterResults(results, maxNumber) {
++        return results.slice(0, maxNumber)
++    }
++
++    getInitialResultSet(terms, callback, _cancellable) {
++        let realms = this._shellRealms.get_all_realms();
++        let matches = [];
++
++        if (terms.length == 1 && "new".startsWith(terms[0])) {
++            matches.push(":new:");
++        }
++
++        for (let realm of realms) {
++            if (!realm.is_current()) {
++                let name = realm.get_realm_name();
++                if (terms.every(t => name.indexOf(t) != -1)) {
++                    matches.push(name);
++                }
++            }
++        }
++        callback(matches);
++    }
++
++    getSubsearchResultSet(previousResults, terms, callback, cancellable) {
++        this.getInitialResultSet(terms, callback, cancellable)
++    }
++}
+diff --git a/js/ui/realms/realmSwitcher.js b/js/ui/realms/realmSwitcher.js
+new file mode 100644
+index 0000000..507df00
+--- /dev/null
++++ b/js/ui/realms/realmSwitcher.js
+@@ -0,0 +1,325 @@
++
++const { Clutter, GObject, Meta, Shell, St } = imports.gi;
++
++const Background = imports.ui.background;
++const SwitcherPopup = imports.ui.switcherPopup;
++const Layout = imports.ui.layout;
++const Main = imports.ui.main;
++
++const WINDOW_ANIMATION_TIME = 2000;
++var APP_ICON_SIZE = 96;
++
++var RealmItem = GObject.registerClass(
++class RealmItem extends St.BoxLayout {
++    _init(realm, workspace_group) {
++        super._init({ vertical: true });
++        this.realm = realm;
++
++        this.add_child(workspace_group);
++
++        this.label = new St.Label({
++            text: `realm-${this.realm.realm_name}`,
++            x_align: Clutter.ActorAlign.CENTER,
++        });
++
++        this.add_child(this.label);
++    }
++
++    activate() {
++        this.realm.set_current();
++    }
++
++});
++
++function getRealmItems() {
++    const monitor = Main.layoutManager.primaryMonitor;
++    const realms = Shell.Realms.get_default();
++    let realm_list = realms.get_running_realms();
++    let items = [];
++    realm_list.forEach(realm => {
++        let ws = realm.get_active_workspace();
++        if (ws) {
++            let size = 256; // default thumbnail size
++            let scale = Math.min(1.0, size / monitor.width, size / monitor.height);
++            let wsgroup = new WorkspaceGroup(ws, monitor, scale);
++            items.push(new RealmItem(realm, wsgroup));
++        }
++    });
++    return items;
++}
++
++var SwitchRealmList = GObject.registerClass(
++class SwitchRealmList extends SwitcherPopup.SwitcherList {
++    _init(items) {
++        super._init(false);
++
++        items.forEach(item => {
++            this.addItem(item, item.label);
++        });
++    }
++});
++
++var SwitchRealmPopup = GObject.registerClass(
++class SwitchRealmPopup extends SwitcherPopup.SwitcherPopup {
++    _init(action, actionBackward) {
++        super._init();
++        this._action = action;
++        this._actionBackward = actionBackward;
++        this._items = getRealmItems();
++        this._switcherList = new SwitchRealmList(this._items);
++    }
++
++    _keyPressHandler(keysym, action) {
++        if (action == this._action)
++            this._select(this._next());
++        else if (action == this._actionBackward)
++            this._select(this._previous());
++        else if (keysym == Clutter.KEY_Left)
++            this._select(this._previous());
++        else if (keysym == Clutter.KEY_Right)
++            this._select(this._next());
++        else
++            return Clutter.EVENT_PROPAGATE;
++
++        return Clutter.EVENT_STOP;
++    }
++
++    _finish() {
++        super._finish();
++        this._items[this._selectedIndex].activate();
++    }
++
++});
++
++const WorkspaceGroup = GObject.registerClass(
++class WorkspaceGroup extends Clutter.Actor {
++    _init(workspace, monitor, scale = 1.0) {
++        super._init();
++        this._workspace = workspace;
++        this._monitor = monitor;
++        this._scale = scale;
++        this._windowRecords = [];
++        this.width = monitor.width * scale;
++        this.height = monitor.height * scale;
++        this._background = new Meta.BackgroundGroup({
++            width: this.width * this._scale,
++            height: this.height * this._scale,
++        });
++        this.add_actor(this._background);
++        this._bgManager = new Background.BackgroundManager({
++            container: this._background,
++            monitorIndex: this._monitor.index,
++            controlPosition: false,
++        });
++        this.clip_to_allocation = true;
++
++        this._createWindows();
++        this.connect('destroy', this._onDestroy.bind(this));
++        this._restackedId = global.display.connect('restacked', this._syncStacking.bind(this));
++    }
++
++    get workspace() {
++        return this._workspace;
++    }
++
++    _shouldShowWindow(window) {
++        if (!window.showing_on_its_workspace())
++            return false;
++
++        const geometry = global.display.get_monitor_geometry(this._monitor.index);
++        const [intersects] = window.get_frame_rect().intersect(geometry);
++        if (!intersects)
++            return false;
++
++        const isSticky = window.is_on_all_workspaces();
++
++        return !isSticky && window.located_on_workspace(this._workspace);
++    }
++
++    _syncStacking() {
++        const windowActors = global.get_window_actors().filter(w =>
++            this._shouldShowWindow(w.meta_window));
++
++        let lastRecord;
++
++        for (const windowActor of windowActors) {
++            const record = this._windowRecords.find(r => r.windowActor === windowActor);
++            this.set_child_above_sibling(record.clone, lastRecord ? lastRecord.clone : this._background);
++            lastRecord = record;
++        }
++    }
++
++    _createWindows() {
++        const windowActors = global.get_window_actors().filter(w =>
++            this._shouldShowWindow(w.meta_window));
++        for (const windowActor of windowActors) {
++            let [width,height] = windowActor.get_size();
++            const clone = new Clutter.Clone({
++                source: windowActor,
++                width: width * this._scale,
++                height: height * this._scale,
++                x: (windowActor.x - this._monitor.x) * this._scale,
++                y: (windowActor.y - this._monitor.y) * this._scale,
++            });
++            this.add_child(clone);
++            const record = {windowActor, clone };
++            record.windowDestroyId = windowActor.connect('destroy', () => {
++                clone.destroy();
++                this._windowRecords.splice(this._windowRecords.indexOf(record), 1);
++            });
++            this._windowRecords.push(record);
++        }
++    }
++
++    _removeWindows() {
++        for (const record of this._windowRecords) {
++            record.windowActor.disconnect(record.windowDestroyId);
++            record.clone.destroy();
++        }
++        this._windowRecords = [];
++    }
++
++    _onDestroy() {
++        global.display.disconnect(this._restackedId);
++        this._removeWindows();
++        this._bgManager.destroy();
++    }
++
++});
++
++const MonitorGroup = GObject.registerClass({
++    Properties: {
++        'progress': GObject.ParamSpec.double(
++            'progress', 'progress', 'progress',
++            GObject.ParamFlags.READWRITE,
++            -Infinity, Infinity, 0),
++    },
++}, class MonitorGroup extends St.Widget {
++    _init(monitor, fromIndex, toIndex) {
++        super._init({
++            clip_to_allocation: true,
++            style_class: 'workspace-animation',
++        });
++        this._monitor = monitor;
++        const constraint = new Layout.MonitorConstraint({ index: monitor.index });
++        this.add_constraint(constraint);
++
++        this._container = new Clutter.Actor();
++        this.add_child(this._container);
++
++        this._progress = 0;
++        this._fadeOut = true;
++
++        this._workspaceGroups = [];
++        this._blackBackground = new Clutter.Actor();
++        this._blackBackground.width = monitor.width;
++        this._blackBackground.height = monitor.height;
++        let [_res, color] = Clutter.Color.from_string("#000000ff");
++        this._blackBackground.background_color = color;
++
++
++
++        this.addWorkspaceByIndex(toIndex, monitor);
++        // add opaque black actor
++        this._container.add_child(this._blackBackground);
++        this.addWorkspaceByIndex(fromIndex, monitor);
++
++        // tween 'from' WorkspaceGroup opacity from 255 to 0 fading workspace to black background
++        // tween 'block' actor opacity from 255 to 0 revealing 'to' WorkspaceGroup
++    }
++
++    addWorkspaceByIndex(idx, monitor) {
++        const workspaceManager = global.workspace_manager;
++        const ws = workspaceManager.get_workspace_by_index(idx);
++        if (ws) {
++            const fullscreen = ws.list_windows().some(w => w.get_monitor() === monitor.index && w.is_fullscreen());
++            const group = new WorkspaceGroup(ws, monitor);
++            this._workspaceGroups.push(group);
++            this._container.add_child(group);
++        }
++    }
++
++    get progress() {
++        return this._progress;
++    }
++
++    // Interpolate opacity from 0 (full opaque) to 50 (full transparent)
++    calculateOpacity(progress) {
++        return 255 - (255 * (progress / 50.0));
++    }
++
++    set progress(p) {
++        const fromGroup = this._workspaceGroups[this._workspaceGroups.length - 1];
++        this._progress = p;
++        // 0 - 50
++        if (p < 50) {
++            this._blackBackground.opacity = 255;
++            fromGroup.opacity = this.calculateOpacity(p);
++        } else if (p < 100) {
++            if (this._fadeOut) {
++                this._fadeOut = false;
++            }
++            fromGroup.opacity = 0;
++            this._blackBackground.opacity = this.calculateOpacity(p - 50);
++        } else {
++            fromGroup.opacity = 0;
++            this._blackBackground.opacity = 0;
++        }
++    }
++});
++
++var ContextSwitchAnimationController = class {
++    constructor(indicator) {
++        this._switchData = null;
++        this._indicator = indicator;
++    }
++
++    _prepareContextSwitch(fromIdx, toIdx) {
++        if (this._switchData) {
++            this._switchData.monitors[0].remove_all_transitions();
++            this._finishContextSwitch(this._switchData);
++        }
++
++        const switchData = {};
++        this._switchData = switchData;
++        switchData.monitors = [];
++        switchData.inProgress = false;
++
++        const monitor = Main.layoutManager.primaryMonitor;
++
++        const group = new MonitorGroup(monitor, fromIdx, toIdx);
++
++        Main.uiGroup.insert_child_above(group, global.window_group);
++
++        switchData.monitors.push(group);
++
++        Meta.disable_unredirect_for_display(global.display);
++    }
++
++    _finishContextSwitch(switchData) {
++        Meta.enable_unredirect_for_display(global.display);
++        this._indicator.update();
++        this._switchData = null;
++        switchData.monitors.forEach(m => m.destroy());
++        if (switchData.onComplete) {
++            switchData.onComplete();
++        }
++    }
++
++    animateSwitch(fromIdx, toIdx, onComplete) {
++
++        this._prepareContextSwitch(fromIdx, toIdx);
++        this._switchData.inProgress = true;
++        this._switchData.onComplete = onComplete;
++
++        const params = {
++            duration: WINDOW_ANIMATION_TIME,
++            mode: Clutter.AnimationMode.EASE_IN_OUT_QUAD,
++        };
++        params.onComplete = () => {
++            this._finishContextSwitch(this._switchData);
++        };
++        this._indicator.clear();
++        this._switchData.monitors[0].ease_property('progress', 100, params);
++    }
++}
+diff --git a/js/ui/realms/realmWindowFrame.js b/js/ui/realms/realmWindowFrame.js
+new file mode 100644
+index 0000000..0a36179
+--- /dev/null
++++ b/js/ui/realms/realmWindowFrame.js
+@@ -0,0 +1,371 @@
++const { Clutter, Cogl, GObject, Meta, Shell, St } = imports.gi;
++
++const Main = imports.ui.main;
++
++var pastelColors = {};
++
++function pastelColorsFromName(name) {
++    var hash = 0;
++
++    if (name in pastelColors) {
++        return pastelColors[name];
++    }
++    if (name === undefined || name === null || name === "") {
++        hash = Math.random() * 0xffffff;
++    } else {
++        for (let i = 0, ii = name.length; i < ii; i++) {
++            hash = name.charCodeAt(i) + ((hash << 5) - hash);
++        }
++    }
++
++    let baseline = 127;
++    let multiplier = 64 + ((hash>>24)&0xff);
++    let ok = false;
++    let i = 0;
++    while (!ok && i++ < 10) {
++        var r = ( Math.round( (hash&0xff) * multiplier ) + baseline ) & 0xff;
++        var g = ( Math.round( ((hash>>8)&0xff) * multiplier ) + baseline ) & 0xff;
++        var b = ( Math.round( ((hash>>16)&0xff) * multiplier ) + baseline ) & 0xff;
++        multiplier += 10;
++        let d = Math.sqrt( Math.pow((r-0xff), 2) + Math.pow(g, 2) + Math.pow(b, 2) );
++        let p = Math.round( ( d / Math.sqrt( Math.pow(255, 2) * 3 ) ) * 100 );
++        if (p <= 35) {
++            continue;
++        }
++        ok = true;
++    }
++
++    pastelColors[name] = [r,g,b];
++    return pastelColors[name];
++}
++
++let IgnoredWindowTypes = [
++    Meta.WindowType.TOOLTIP
++    , Meta.WindowType.MENU
++    , Meta.WindowType.DROPDOWN_MENU
++    , Meta.WindowType.POPUP_MENU
++];
++
++var WindowFrameManager = class WindowFrameManager {
++    constructor() {
++        this._windowMapId =
++            global.window_manager.connect('map', this._handleWindowMap.bind(this));
++        this._contextWindowMovedId =
++            global.workspace_manager.connect('context-window-moved', this._onContextWindowMoved.bind(this));
++
++        this._realms = Shell.Realms.get_default();
++        this._labelOnTop = true;
++        this._workspaces = [];
++        this.trackWindows();
++    }
++
++    _onContextWindowMoved(workspaceManager, window) {
++        let actor = window.get_compositor_private();
++        if (actor) {
++            this.handleWindow(actor);
++        }
++        return Clutter.EVENT_PROPAGATE;
++    }
++
++    _handleWindowMap(shellwm, actor) {
++        this.handleWindow(actor);
++        return Clutter.EVENT_PROPAGATE;
++    }
++
++    windowRealmName(win) {
++        if (this._realms.is_citadel_window(win)) {
++            return "Citadel";
++        } else {
++            let realm = this._realms.realm_by_window(win);
++            if (realm) {
++                return realm.realm_name;
++            }
++        }
++        return "";
++    }
++
++    handleWindow(actor) {
++        let win = actor.metaWindow;
++
++        if (win.is_on_foreign_workspace_context()) {
++            let realm_name = this.windowRealmName(win);
++            this._applyBorder(actor, win, realm_name);
++        } else {
++            this._removeBorder(actor);
++        }
++    }
++
++    trackWindows() {
++        var actors = global.get_window_actors();
++        actors.forEach(a => this.handleWindow(a));
++    }
++
++    _removeLabel(actor) {
++        var children = actor.get_children();
++        for (const child of children) {
++            if (child.get_name() == 'realm-label') {
++                actor.remove_child(child);
++            }
++        }
++    }
++
++    _removeBorder(actor) {
++        actor.remove_effect_by_name('foreign');
++        this._removeLabel(actor);
++    }
++
++    _applyLabel(actor, win, realm_name, r, g, b) {
++        let _lot = this._labelOnTop;
++        //let geom = actor.get_allocation_geometry();
++        let box = actor.get_allocation_box();
++        if ((box.y <= 30) || // Top bar XXX: Calculate/obtain from somewhere
++            win.is_fullscreen() === true || // Fullscreen
++            [Meta.MaximizeFlags.BOTH, Meta.MaximizeFlags.VERTICAL].includes(win.get_maximized())) { // Maximized
++            _lot = false;
++        }
++        this._removeLabel(actor);
++
++        let label = new St.Label({
++            style_class: 'realm-frame-label',
++            z_position: 1.0,
++        })
++        let clutter_text = label.get_clutter_text();
++        let alpha = 64;
++        if (_lot === true) {
++            alpha *= 2;
++        }
++        let color_text = new Clutter.Color({
++            red: 0,
++            green: 0,
++            blue: 0,
++            alpha: alpha * 1.5
++        });
++        let color_background = new Clutter.Color({
++            red: r,
++            green: g,
++            blue: b,
++            alpha: alpha
++        });
++        clutter_text.set_color(color_text);
++        clutter_text.set_background_color(color_background);
++        clutter_text.set_name('realm-label');
++        label.set_text('  '+realm_name+'  ');
++
++        let orect = win.get_frame_rect();
++        let irect = win.get_buffer_rect();
++        let borderX = orect.x - irect.x;
++        let borderY = orect.y - irect.y;
++        let margins = {
++            top: borderY + 1
++            , left: borderX + 2
++        };
++        margins.top -= 3;
++        margins.left -= 3;
++
++        if (_lot === true) {
++            margins.top -= label.get_height();
++            margins.left -= 2;
++        }
++        if (win.is_fullscreen() === true || win.get_maximized() === Meta.MaximizeFlags.BOTH) {
++            margins.top = 0;
++            margins.left = 0;
++        }
++        label.x = margins.left;
++        label.y = margins.top;
++        actor.add_child(label);
++    }
++
++    _applyBorder(actor, win, realm_name) {
++        if (IgnoredWindowTypes.includes(win.get_window_type())) {
++            return;
++        }
++        let e = new RealmFrameEffect();
++        e.setRGB(realm_name, win);
++
++        if (win.get_window_type() === Meta.WindowType.NORMAL) {
++            this._applyLabel(actor, win, realm_name, e.r, e.g, e.b);
++        }
++
++        if (!actor.get_effect('foreign')) {
++            actor.add_effect_with_name('foreign', e);
++        }
++    }
++
++}
++
++var RealmFrameEffect = GObject.registerClass(
++    class RealmFrameEffect extends Clutter.Effect {
++        _init() {
++            super._init();
++            this._pipeline = null;
++        }
++        setRGB(name, win) {
++            this._win = win;
++            var r = 0, g = 0, b = 0;
++            if (name == 'Citadel') {
++                r = 0xff;
++            } else {
++                [r,g,b] = pastelColorsFromName(name);
++            }
++            this.r = r;
++            this.g = g;
++            this.b = b;
++        }
++
++        adjust_actor_box(box, win) {
++            let frame_rect = win.get_frame_rect();
++            let buffer_rect = win.get_buffer_rect();
++            let borderX = frame_rect.x - buffer_rect.x;
++            let borderY = frame_rect.y - buffer_rect.y;
++
++            let margins = {
++                top: borderY - 3,
++                bottom: borderY - 1,
++                left: borderX - 3,
++                right: borderX - 3,
++            };
++
++            let wayland = win.get_client_type() == Meta.WindowClientType.WAYLAND;
++
++            if (wayland) {
++                margins.bottom += 4;
++            }
++
++            let width = 2;
++
++            switch (win.get_maximized()) {
++                case Meta.MaximizeFlags.BOTH:
++                    margins.top += width;
++                    margins.right += width;
++                    margins.bottom += width - (wayland ? 5 : 0);
++                    margins.left += width;
++                    break;
++                case Meta.MaximizeFlags.HORIZONTAL:
++                    margins.right += width;
++                    margins.left += width;
++                    break;
++                case Meta.MaximizeFlags.VERTICAL:
++                    margins.top += width;
++                    margins.bottom += width;
++                    break;
++            }
++
++            if (win.is_fullscreen()) {
++                margins.top += 3;
++                margins.right += 2;
++                margins.bottom -= (wayland ? 3 : 0);
++                margins.left += 3;
++            }
++
++            if (!wayland && !win.decorated && !win.is_fullscreen() && (win.get_maximized() !== Meta.MaximizeFlags.BOTH)) {
++                margins.bottom += 4;
++            }
++
++        }
++
++        draw_rect(node, x, y, width, height) {
++            const box = new Clutter.ActorBox();
++            box.set_origin(x, y);
++            box.set_size(width, height);
++            node.add_rectangle(box);
++        }
++
++        draw_hline(node, x, y, size, line_width = 2) {
++            this.draw_rect(node, x, y, size, line_width);
++        }
++
++        draw_vline(node, x, y, size, line_width = 2) {
++            this.draw_rect(node, x, y, line_width, size);
++        }
++
++        vfunc_paint_node(node, ctx) {
++            let actor = this.get_actor();
++
++            const actorNode = new Clutter.ActorNode(actor, -1);
++            node.add_child(actorNode);
++
++            if (!this._pipeline) {
++                let framebuffer = ctx.get_framebuffer();
++                let coglContext = framebuffer.get_context();
++                let color = new Cogl.Color();
++                color.init_from_4ub(this.r, this.g, this.b, 0xc4);
++                this._pipeline = new Cogl.Pipeline(coglContext);
++                this._pipeline.set_color(color);
++            }
++
++            let win = actor.get_meta_window();
++            let frame_rect = win.get_frame_rect();
++            let buffer_rect = win.get_buffer_rect();
++            let borderX = frame_rect.x - buffer_rect.x;
++            let borderY = frame_rect.y - buffer_rect.y;
++
++            let margins = {
++                top: borderY - 3,
++                bottom: borderY - 1,
++                left: borderX - 3,
++                right: borderX - 3,
++            };
++
++            let wayland = win.get_client_type() == Meta.WindowClientType.WAYLAND;
++
++            if (wayland) {
++                margins.bottom += 4;
++            }
++
++            let width = 2;
++
++            switch (win.get_maximized()) {
++                case Meta.MaximizeFlags.BOTH:
++                    margins.top += width;
++                    margins.right += width;
++                    margins.bottom += width - (wayland ? 5 : 0);
++                    margins.left += width;
++                    break;
++                case Meta.MaximizeFlags.HORIZONTAL:
++                    margins.right += width;
++                    margins.left += width;
++                    break;
++                case Meta.MaximizeFlags.VERTICAL:
++                    margins.top += width;
++                    margins.bottom += width;
++                    break;
++            }
++
++            if (win.is_fullscreen()) {
++                margins.top += 3;
++                margins.right += 2;
++                margins.bottom -= (wayland ? 3 : 0);
++                margins.left += 3;
++            }
++
++            if (!wayland && !win.decorated && !win.is_fullscreen() && (win.get_maximized() !== Meta.MaximizeFlags.BOTH)) {
++                margins.bottom += 4;
++            }
++
++            const pipelineNode = new Clutter.PipelineNode(this._pipeline);
++            pipelineNode.set_name('Realm Frame');
++            node.add_child(pipelineNode);
++
++            const render_box = new Clutter.ActorBox();
++
++            let alloc = actor.get_allocation_box();
++
++            let w = alloc.get_width() - (margins.right + margins.left);
++            let h = alloc.get_height() - (margins.bottom + margins.top + width);
++
++            // Clockwise starting at top
++
++            // Top
++
++            this.draw_hline(pipelineNode, margins.left, margins.top + width, w, width * 2);
++
++            // Right
++            this.draw_vline(pipelineNode, alloc.get_width() - width - margins.right, width + margins.top, h);
++
++            // Bottom
++            this.draw_hline(pipelineNode, margins.left, alloc.get_height() - width - margins.bottom, w);
++
++            // Left
++            this.draw_vline(pipelineNode, margins.left, margins.top + width, h);
++        }
++    });
+diff --git a/js/ui/realms/realmWindowMenu.js b/js/ui/realms/realmWindowMenu.js
+new file mode 100644
+index 0000000..1aef4d0
+--- /dev/null
++++ b/js/ui/realms/realmWindowMenu.js
+@@ -0,0 +1,113 @@
++
++const { Shell, GObject } = imports.gi;
++
++const PopupMenu = imports.ui.popupMenu;
++
++function _windowAppId(window) {
++    const tracker = Shell.WindowTracker.get_default();
++    const app = tracker.get_window_app(window);
++    if (app) {
++        return app.get_id();
++    } else {
++        log(`No app found for window ${window.get_description()}`)
++        return null;
++    }
++}
++
++function windowMenuDebugString(window) {
++    const id = _windowAppId(window);
++    const realm_name = windowRealmName(window);
++
++    if (!realm_name) {
++        return id;
++    } else if (window.is_on_foreign_workspace_context()) {
++        return `${id} [${realm_name}]`;
++    } else {
++        return `${id} (${realm_name})`;
++    }
++}
++
++function _createMoveWindowItem(label, realm_name, window) {
++    let item = new PopupMenu.PopupMenuItem(label);
++    item.connect('activate', () => {
++        let realms = Shell.Realms.get_default();
++        let realm = realms.realm_by_name(realm_name);
++
++        if (realm) {
++            realm.move_window_to_context(window);
++        }
++    });
++    return item;
++}
++
++// Return name of the realm the application this window belongs to is running in.
++function windowRealmName(window) {
++    const realms = Shell.Realms.get_default();
++
++    if (realms.is_citadel_window(window)) {
++        return "Citadel"
++    }
++
++    let realm = realms.realm_by_window(window);
++
++    if (realm) {
++        return realm.realm_name;
++    } else {
++        return null;
++    }
++}
++
++// Return name of realm the context this window is currently located on belongs to
++function windowContextRealmName(window) {
++    if (window.on_all_workspaces) {
++        return windowRealmName(window);
++    }
++
++    let ws = window.get_workspace();
++
++    if (!ws) {
++        return null;
++    }
++    const realms = Shell.Realms.get_default();
++    let realm = realms.realm_by_context_id(ws.get_context_id());
++
++    if (realm) {
++        return realm.realm_name;
++    } else {
++        return null;
++    }
++}
++
++function realmWindowMenu(window) {
++
++    const realm_name = windowContextRealmName(window);
++
++    if (!realm_name) {
++        return null;
++    }
++
++    const realms = Shell.Realms.get_default();
++    let other_realms = [];
++
++    let running_realms = realms.get_running_realms();
++    running_realms.forEach(realm => {
++        if (realm.realm_name != realm_name) {
++            other_realms.push(realm.realm_name);
++        }
++    });
++
++    if (other_realms.length == 0) {
++        return null;
++    } else if (other_realms.length == 1) {
++        let name = other_realms[0];
++        return _createMoveWindowItem(`Move to realm-${name}`, name, window);
++    }
++
++    let subMenu = new PopupMenu.PopupSubMenuMenuItem('Move to Realm...', true);
++
++    other_realms.forEach(name => {
++        let item = _createMoveWindowItem(`realm-${name}`, name, window);
++        subMenu.menu.addMenuItem(item);
++    });
++    return subMenu;
++}
+\ No newline at end of file
+diff --git a/js/ui/windowManager.js b/js/ui/windowManager.js
+index 34c54b6..66774dc 100644
+--- a/js/ui/windowManager.js
++++ b/js/ui/windowManager.js
+@@ -198,6 +198,8 @@ var WorkspaceTracker = class {
+         workspaceManager.connect('workspaces-reordered', () => {
+             this._workspaces.sort((a, b) => a.index() - b.index());
+         });
++        workspaceManager.connect('context-switched',
++                                 this._workspaceContextSwitched.bind(this));
+         global.window_manager.connect('switch-workspace',
+                                       this._queueCheckWorkspaces.bind(this));
+ 
+@@ -253,6 +255,8 @@ var WorkspaceTracker = class {
+                 emptyWorkspaces[index] = false;
+         }
+ 
++        let current_context_id = workspaceManager.active_context_id();
++
+         let windows = global.get_window_actors();
+         for (i = 0; i < windows.length; i++) {
+             let actor = windows[i];
+@@ -261,7 +265,12 @@ var WorkspaceTracker = class {
+             if (win.is_on_all_workspaces())
+                 continue;
+ 
+-            let workspaceIndex = win.get_workspace().index();
++            let workspace = win.get_workspace();
++
++            if (workspace.get_context_id() != current_context_id)
++                continue;
++
++            let workspaceIndex = workspace.index();
+             emptyWorkspaces[workspaceIndex] = false;
+         }
+ 
+@@ -339,6 +348,28 @@ var WorkspaceTracker = class {
+             this._checkWorkspacesId = Meta.later_add(Meta.LaterType.BEFORE_REDRAW, this._checkWorkspaces.bind(this));
+     }
+ 
++
++    _workspaceContextSwitched() {
++        let workspaceManager = global.workspace_manager;
++        let numWorkspaces = workspaceManager.n_workspaces;
++
++        this._workspaces.forEach(workspace => {
++            workspace.disconnect(workspace._windowAddedId);
++            workspace.disconnect(workspace._windowRemovedId);
++        });
++
++        this._workspaces = [];
++
++        for (let w = 0; w < numWorkspaces; w++) {
++            let workspace = workspaceManager.get_workspace_by_index(w);
++            workspace._windowAddedId = workspace.connect('window-added', this._queueCheckWorkspaces.bind(this));
++            workspace._windowRemovedId = workspace.connect('window-removed', this._windowRemoved.bind(this));
++            this._workspaces[w] = workspace;
++        }
++        this._queueCheckWorkspaces();
++        return false;
++    }
++
+     _nWorkspacesChanged() {
+         let workspaceManager = global.workspace_manager;
+         let oldNumWorkspaces = this._workspaces.length;
+@@ -1630,6 +1661,14 @@ var WindowManager = class {
+ 
+         this._switchInProgress = true;
+ 
++        if (direction == Meta.MotionDirection.CONTEXT_SWITCH) {
++            Main.realmManager.animateSwitch(from, to, () => {
++                this._shellwm.completed_switch_workspace();
++                this._switchInProgress = false;
++            });
++            return;
++        }
++
+         this._workspaceAnimation.animateSwitch(from, to, direction, () => {
+             this._shellwm.completed_switch_workspace();
+             this._switchInProgress = false;
+diff --git a/js/ui/windowMenu.js b/js/ui/windowMenu.js
+index bb6a8df..fbb7e23 100644
+--- a/js/ui/windowMenu.js
++++ b/js/ui/windowMenu.js
+@@ -1,11 +1,12 @@
+ // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*
+ /* exported WindowMenuManager */
+ 
+-const { GLib, Meta, St } = imports.gi;
++const { GLib, Meta, Shell, St } = imports.gi;
+ 
+ const BoxPointer = imports.ui.boxpointer;
+ const Main = imports.ui.main;
+ const PopupMenu = imports.ui.popupMenu;
++const RealmWindowMenu = imports.ui.realms.realmWindowMenu;
+ 
+ var WindowMenu = class extends PopupMenu.PopupMenu {
+     constructor(window, sourceActor) {
+@@ -24,6 +25,18 @@ var WindowMenu = class extends PopupMenu.PopupMenu {
+ 
+         let item;
+ 
++        let s = RealmWindowMenu.windowMenuDebugString(window);
++
++        this.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(s));
++
++        if (!window.is_on_all_workspaces()) {
++            let realmSubmenu = RealmWindowMenu.realmWindowMenu(window);
++            if (realmSubmenu) {
++                this.addMenuItem(realmSubmenu);
++            }
++        }
++        this.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
++
+         item = this.addAction(_("Minimize"), () => {
+             window.minimize();
+         });
+diff --git a/js/ui/workspacesView.js b/js/ui/workspacesView.js
+index 1af45d8..c7f5eb6 100644
+--- a/js/ui/workspacesView.js
++++ b/js/ui/workspacesView.js
+@@ -123,6 +123,10 @@ class WorkspacesView extends WorkspacesViewBase {
+         this._updateWorkspacesId =
+             workspaceManager.connect('notify::n-workspaces',
+                                      this._updateWorkspaces.bind(this));
++        this._contextSwitchedId =
++            workspaceManager.connect('context-switched',
++                this._refreshWorkspaces.bind(this));
++
+         this._reorderWorkspacesId =
+             workspaceManager.connect('workspaces-reordered', () => {
+                 this._workspaces.sort((a, b) => {
+@@ -451,6 +455,13 @@ class WorkspacesView extends WorkspacesViewBase {
+         }
+     }
+ 
++    _refreshWorkspaces() {
++        for (let ws = this._workspaces.pop(); ws; ws = this._workspaces.pop()) {
++            ws.destroy();
++        }
++        this._updateWorkspaces();
++    }
++
+     _updateWorkspaces() {
+         let workspaceManager = global.workspace_manager;
+         let newNumWorkspaces = workspaceManager.n_workspaces;
+@@ -500,6 +511,7 @@ class WorkspacesView extends WorkspacesViewBase {
+         global.window_manager.disconnect(this._switchWorkspaceNotifyId);
+         let workspaceManager = global.workspace_manager;
+         workspaceManager.disconnect(this._updateWorkspacesId);
++        workspaceManager.disconnect(this._contextSwitchedId);
+         workspaceManager.disconnect(this._reorderWorkspacesId);
+     }
+ 
+diff --git a/src/meson.build b/src/meson.build
+index 3ca8f9c..ab54287 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -125,6 +125,7 @@ libshell_private_headers = [
+   'shell-app-cache-private.h',
+   'shell-app-system-private.h',
+   'shell-global-private.h',
++  'shell-realms-private.h',
+   'shell-window-tracker-private.h',
+   'shell-wm-private.h'
+ ]
+@@ -147,6 +148,12 @@ libshell_sources = [
+   'shell-perf-log.c',
+   'shell-polkit-authentication-agent.c',
+   'shell-polkit-authentication-agent.h',
++  'shell-realm-item.c',
++  'shell-realm-item.h',
++  'shell-realms.c',
++  'shell-realms.h',
++  'shell-realm-tracker.c',
++  'shell-realm-tracker.h',
+   'shell-screenshot.c',
+   'shell-secure-text-buffer.c',
+   'shell-secure-text-buffer.h',
+diff --git a/src/shell-app-cache.c b/src/shell-app-cache.c
+index 44fc8b0..092e83f 100644
+--- a/src/shell-app-cache.c
++++ b/src/shell-app-cache.c
+@@ -23,7 +23,7 @@
+  * Shell is running.
+  */
+ 
+-#define DEFAULT_TIMEOUT_SECONDS 5
++#define DEFAULT_TIMEOUT_SECONDS 2
+ 
+ struct _ShellAppCache
+ {
+diff --git a/src/shell-app-system.c b/src/shell-app-system.c
+index 828fa72..033e731 100644
+--- a/src/shell-app-system.c
++++ b/src/shell-app-system.c
+@@ -12,6 +12,7 @@
+ #include "shell-app-cache-private.h"
+ #include "shell-app-private.h"
+ #include "shell-window-tracker-private.h"
++#include "shell-realms.h"
+ #include "shell-app-system-private.h"
+ #include "shell-global.h"
+ #include "shell-util.h"
+@@ -91,6 +92,110 @@ static void shell_app_system_class_init(ShellAppSystemClass *klass)
+ 		  G_TYPE_NONE, 0);
+ }
+ 
++/*
++ * Applications belonging to realms have a prefix added to the filenames
++ * of their desktop files indicating the name of the realm. For example
++ * in a realm called 'main' the desktop file 'org.gnome.Terminal.desktop'
++ * is renamed to 'realm-main.org.gnome.Terminal.desktop'.
++ *
++ * This has the effect of creating a separate application ID for instances
++ * of the same application in multiple realms.
++ */
++static const char *
++realm_name_from_application_id (const char *id)
++{
++  gchar **split = NULL;
++  const char *result = NULL;
++
++  if (!g_str_has_prefix (id, "realm-")) {
++    return NULL;
++  }
++
++  split = g_strsplit(id, ".", 2);
++
++  if (split[0]) {
++    g_assert_true (g_str_has_prefix (split[0], "realm-"));
++    result = g_strdup(split[0] + 6);
++  }
++
++  g_strfreev (split);
++  return result;
++}
++
++
++char *
++current_realm_name (gboolean name_only)
++{
++  gchar *link = NULL;
++  gchar *p = NULL;
++  gchar *realm = NULL;
++
++  link = g_file_read_link ("/run/citadel/realms/current/current.realm", NULL);
++
++  if (link) {
++    p = g_strrstr(link, "/realm-");
++    if (p) {
++      /* skip slash character */
++      p++;
++      if (name_only) {
++        /* skip 'realm-' */
++        p += 6;
++      }
++      realm = g_strdup(p);
++    }
++    g_free (link);
++  }
++
++  return realm;
++}
++
++static gboolean
++is_current_realm_app (const char *id,  const char *current_realm)
++{
++
++  return !g_str_has_prefix (id, "realm-") || g_str_has_prefix (id, current_realm);
++}
++
++static void
++refresh_installed_apps (ShellAppSystem *self)
++{
++  const GList *l;
++  GAppInfo *app;
++  const char *app_id;
++  char *current_realm;
++  ShellAppSystemPrivate *priv = self->priv;
++
++  g_list_free_full (g_steal_pointer (&priv->installed_apps), g_object_unref);
++
++  l = shell_app_cache_get_all (shell_app_cache_get_default ());
++
++  current_realm = current_realm_name (FALSE);
++
++  while (l) {
++    app = l->data;
++    app_id = g_app_info_get_id (app);
++
++    if (is_current_realm_app (app_id, current_realm)) {
++      priv->installed_apps = g_list_prepend (priv->installed_apps, g_object_ref (app));
++    }
++    l = l->next;
++  }
++  priv->installed_apps = g_list_reverse (priv->installed_apps);
++
++  g_free (current_realm);
++}
++
++
++static char *
++realm_wm_class (const char *wmclass, const char *realm_name)
++{
++  if (realm_name) {
++    return g_strdup_printf ("realm-%s.%s", realm_name, wmclass);
++  } else {
++    return g_strdup (wmclass);
++  }
++}
++
+ static void
+ scan_startup_wm_class_to_id (ShellAppSystem *self)
+ {
+@@ -106,6 +211,7 @@ scan_startup_wm_class_to_id (ShellAppSystem *self)
+     {
+       GAppInfo *info = l->data;
+       const char *startup_wm_class, *id, *old_id;
++      char *realm_wmclass;
+ 
+       id = g_app_info_get_id (info);
+       startup_wm_class = g_desktop_app_info_get_startup_wm_class (G_DESKTOP_APP_INFO (info));
+@@ -113,12 +219,17 @@ scan_startup_wm_class_to_id (ShellAppSystem *self)
+       if (startup_wm_class == NULL)
+         continue;
+ 
++      realm_wmclass = realm_wm_class (startup_wm_class, realm_name_from_application_id (id));
++
+       /* In case multiple .desktop files set the same StartupWMClass, prefer
+        * the one where ID and StartupWMClass match */
+-      old_id = g_hash_table_lookup (priv->startup_wm_class_to_id, startup_wm_class);
+-      if (old_id == NULL || strcmp (id, startup_wm_class) == 0)
++      old_id = g_hash_table_lookup (priv->startup_wm_class_to_id, realm_wmclass);
++      if (old_id == NULL || strcmp (id, startup_wm_class) == 0) {
+         g_hash_table_insert (priv->startup_wm_class_to_id,
+-                             g_strdup (startup_wm_class), g_strdup (id));
++                             g_strdup (realm_wmclass), g_strdup (id));
++      }
++
++      g_free (realm_wmclass);
+     }
+ }
+ 
+@@ -347,15 +458,19 @@ shell_app_system_lookup_heuristic_basename (ShellAppSystem *system,
+  */
+ ShellApp *
+ shell_app_system_lookup_desktop_wmclass (ShellAppSystem *system,
+-                                         const char     *wmclass)
++                                         const char     *wmclass,
++                                         const char     *realm_name)
+ {
+   char *canonicalized;
+   char *desktop_file;
++  char *classname;
+   ShellApp *app;
+ 
+   if (wmclass == NULL)
+     return NULL;
+ 
++  classname = realm_wm_class (wmclass, realm_name);
++
+   /* First try without changing the case (this handles
+      org.example.Foo.Bar.desktop applications)
+ 
+@@ -363,14 +478,16 @@ shell_app_system_lookup_desktop_wmclass (ShellAppSystem *system,
+      the WM_CLASS to Org.example.Foo.Bar, but it also
+      sets the instance part to org.example.Foo.Bar, so we're ok
+   */
+-  desktop_file = g_strconcat (wmclass, ".desktop", NULL);
++  desktop_file = g_strconcat (classname, ".desktop", NULL);
+   app = shell_app_system_lookup_heuristic_basename (system, desktop_file);
+   g_free (desktop_file);
+ 
+-  if (app)
++  if (app) {
++    g_free (classname);
+     return app;
++  }
+ 
+-  canonicalized = g_ascii_strdown (wmclass, -1);
++  canonicalized = g_ascii_strdown (classname, -1);
+ 
+   /* This handles "Fedora Eclipse", probably others.
+    * Note g_strdelimit is modify-in-place. */
+@@ -382,6 +499,7 @@ shell_app_system_lookup_desktop_wmclass (ShellAppSystem *system,
+ 
+   g_free (canonicalized);
+   g_free (desktop_file);
++  g_free (classname);
+ 
+   return app;
+ }
+@@ -398,14 +516,20 @@ shell_app_system_lookup_desktop_wmclass (ShellAppSystem *system,
+  */
+ ShellApp *
+ shell_app_system_lookup_startup_wmclass (ShellAppSystem *system,
+-                                         const char     *wmclass)
++                                         const char     *wmclass,
++                                         const char     *realm_name)
+ {
+   const char *id;
++  char *classname;
+ 
+   if (wmclass == NULL)
+     return NULL;
+ 
+-  id = g_hash_table_lookup (system->priv->startup_wm_class_to_id, wmclass);
++  classname = realm_wm_class (wmclass, realm_name);
++
++  id = g_hash_table_lookup (system->priv->startup_wm_class_to_id, classname);
++  g_free (classname);
++
+   if (id == NULL)
+     return NULL;
+ 
+@@ -435,6 +559,29 @@ _shell_app_system_notify_app_state_changed (ShellAppSystem *self,
+   g_signal_emit (self, signals[APP_STATE_CHANGED], 0, app);
+ }
+ 
++static gboolean
++is_current_realm_context_app(ShellApp *app)
++{
++  ShellRealms *realms = shell_realms_get_default();
++  ShellRealmItem *item = shell_realms_current_realm (realms);
++  guint id = (item) ? shell_realm_item_get_context_id (item) : 0;
++
++  GSList *iter = shell_app_get_windows (app);
++
++  while (iter) {
++    MetaWindow *window = iter->data;
++    if (meta_window_is_on_all_workspaces (window)) {
++      return true;
++    }
++    MetaWorkspace *workspace = meta_window_get_workspace (window);
++    if (meta_workspace_get_context_id (workspace) == id) {
++      return true;
++    }
++    iter = iter->next;
++  }
++  return false;
++}
++
+ /**
+  * shell_app_system_get_running:
+  * @self: A #ShellAppSystem
+@@ -458,7 +605,9 @@ shell_app_system_get_running (ShellAppSystem *self)
+     {
+       ShellApp *app = key;
+ 
+-      ret = g_slist_prepend (ret, app);
++      if (is_current_realm_context_app (app)) {
++        ret = g_slist_prepend (ret, app);
++      }
+     }
+ 
+   ret = g_slist_sort (ret, (GCompareFunc)shell_app_compare);
+@@ -482,12 +631,16 @@ shell_app_system_search (const char *search_string)
+ {
+   char ***results = g_desktop_app_info_search (search_string);
+   char ***groups, **ids;
++  char *current_realm;
++
++  current_realm = current_realm_name (FALSE);
+ 
+   for (groups = results; *groups; groups++)
+     for (ids = *groups; *ids; ids++)
+-      if (!g_utf8_validate (*ids, -1, NULL))
++      if (!g_utf8_validate (*ids, -1, NULL) || !is_current_realm_app (*ids, current_realm))
+         **ids = '\0';
+ 
++  g_free (current_realm);
+   return results;
+ }
+ 
+@@ -504,5 +657,7 @@ shell_app_system_search (const char *search_string)
+ GList *
+ shell_app_system_get_installed (ShellAppSystem *self)
+ {
+-  return shell_app_cache_get_all (shell_app_cache_get_default ());
++  ShellAppSystemPrivate *priv = self->priv;
++  refresh_installed_apps (self);
++  return priv->installed_apps;
+ }
+diff --git a/src/shell-app-system.h b/src/shell-app-system.h
+index 8719dbc..6a0203e 100644
+--- a/src/shell-app-system.h
++++ b/src/shell-app-system.h
+@@ -20,9 +20,11 @@ ShellApp       *shell_app_system_lookup_heuristic_basename    (ShellAppSystem  *
+                                                                const char      *id);
+ 
+ ShellApp       *shell_app_system_lookup_startup_wmclass       (ShellAppSystem *system,
+-                                                               const char     *wmclass);
++                                                               const char     *wmclass,
++                                                               const char     *realm_name);
+ ShellApp       *shell_app_system_lookup_desktop_wmclass       (ShellAppSystem *system,
+-                                                               const char     *wmclass);
++                                                               const char     *wmclass,
++                                                               const char     *realm_name);
+ 
+ GSList         *shell_app_system_get_running               (ShellAppSystem  *self);
+ char         ***shell_app_system_search                    (const char *search_string);
+diff --git a/src/shell-global.c b/src/shell-global.c
+index 027c9d6..a48d5ef 100644
+--- a/src/shell-global.c
++++ b/src/shell-global.c
+@@ -49,6 +49,7 @@
+ #include "shell-util.h"
+ #include "st.h"
+ #include "switcheroo-control.h"
++#include "shell-realm-tracker.h"
+ 
+ static ShellGlobal *the_object = NULL;
+ 
+@@ -1060,6 +1061,8 @@ _shell_global_set_plugin (ShellGlobal *global,
+   global->focus_manager = st_focus_manager_get_for_stage (global->stage);
+ 
+   update_scaling_factor (global, settings);
++
++  shell_realm_tracker_start ();
+ }
+ 
+ GjsContext *
+diff --git a/src/shell-realm-item.c b/src/shell-realm-item.c
+new file mode 100644
+index 0000000..6ea84bd
+--- /dev/null
++++ b/src/shell-realm-item.c
+@@ -0,0 +1,392 @@
++#include "shell-global.h"
++#include "shell-realm-item.h"
++#include "shell-realm-tracker.h"
++#include <meta/meta-workspace-manager.h>
++#include <meta/display.h>
++
++struct _ShellRealmItem {
++    GObject parent;
++    char *realm_name;
++    char *description;
++    char *namespace;
++    MetaWorkspaceContext *context;
++    guint8 status;
++    gboolean tagged;
++    gboolean disposed;
++};
++
++G_DEFINE_TYPE (ShellRealmItem, shell_realm_item, G_TYPE_OBJECT);
++
++
++enum {
++    PROP_0,
++    PROP_ITEM_REALM_NAME,
++    PROP_ITEM_DESCRIPTION,
++    PROP_ITEM_NAMESPACE
++};
++
++#define REALM_STATUS_RUNNING 1
++#define REALM_STATUS_CURRENT 2
++#define REALM_STATUS_SYSTEM  4
++
++static void
++shell_realm_item_init(ShellRealmItem *item)
++{
++}
++
++ShellRealmItem *
++shell_realm_item_new (const char *realm_name, const char *description, const char *namespace, guint8 status)
++{
++  ShellRealmItem *item = g_object_new (SHELL_TYPE_REALM_ITEM, NULL);
++  item->realm_name = g_strdup (realm_name);
++  item->description = g_strdup (description);
++  item->namespace = g_strdup (namespace);
++  item->status = status;
++  item->context = NULL;
++  item->tagged = FALSE;
++  item->disposed = FALSE;
++
++  return item;
++}
++
++void
++shell_realm_item_acquire_context (ShellRealmItem *item)
++{
++  if (item->context || item->disposed || shell_realm_item_is_system (item)) {
++    return;
++  }
++
++  if (!item->namespace || !shell_realm_item_is_running (item)) {
++    g_warning ("ShellRealmItem: Cannot acquire workspace context for realm '%s' because not running or no namespace", item->realm_name);
++    return;
++  }
++
++  MetaDisplay *display = shell_global_get_display (shell_global_get());
++  MetaWorkspaceManager *workspace_manager = meta_display_get_workspace_manager (display);
++  item->context = meta_workspace_manager_context_for_namespace (workspace_manager, item->namespace);
++}
++
++/**
++ * shell_realm_item_get_realm_name:
++ * @item: A #ShellRealmItem instance
++ *
++ * Returns: The name of the realm for this #ShellRealmItem
++ */
++const char *
++shell_realm_item_get_realm_name (ShellRealmItem *item)
++{
++  return item->realm_name;
++}
++
++/**
++ * shell_realm_item_get_description:
++ * @item: A #ShellRealmItem instance
++ *
++ * Returns: The description field for this realm or an empty string if no description is set
++ */
++const char *
++shell_realm_item_get_description (ShellRealmItem *item)
++{
++  if (item->description)
++    return item->description;
++  else
++    return "";
++}
++
++
++/**
++ * shell_realm_item_get_namespace:
++ * @item: A #ShellRealmItem instance
++ *
++ * Returns: The namespace field for this realm or an empty string if no namespace is set
++ */
++const char *
++shell_realm_item_get_namespace (ShellRealmItem *item)
++{
++  if (item->namespace)
++    return item->namespace;
++  else
++    return "";
++}
++
++/**
++ * shell_realm_item_get_context_id:
++ * @item: A #ShellRealmItem instance
++ *
++ * Returns: The context id for the #MetaWorkspaceContext of this realm or 0 if
++ *   no context exists.
++ */
++guint
++shell_realm_item_get_context_id (ShellRealmItem *item)
++{
++  if (shell_realm_item_is_running (item) && !item->context) {
++    shell_realm_item_acquire_context (item);
++  }
++
++  if (item->context) {
++    return meta_workspace_context_id (item->context);
++  } else {
++    return 0;
++  }
++}
++
++/**
++ * shell_realm_item_get_active_workspace:
++ * @item: A #ShellRealmItem
++ *
++ * Returns: (transfer none): The current workspace for the context
++ *                           belonging to this item.
++ */
++MetaWorkspace *
++shell_realm_item_get_active_workspace (ShellRealmItem *item)
++{
++  if (shell_realm_item_is_running (item) && !item->context) {
++    shell_realm_item_acquire_context (item);
++  }
++
++  if (item->context) {
++    return meta_workspace_context_get_active_workspace (item->context);
++  } else {
++    return NULL;
++  }
++}
++
++/**
++ * shell_realm_item_activate_context:
++ * @item: A #ShellRealmItem instance for a running realm
++ *
++ * If a #MetaWorkspaceContext is associated with this realm
++ * set it as the active workspace context.
++ */
++void
++shell_realm_item_activate_context (ShellRealmItem *item)
++{
++  shell_realm_item_acquire_context (item);
++
++  if (item->context) {
++    meta_workspace_context_activate (item->context);
++  }
++}
++
++/**
++ * shell_realm_item_set_current:
++ * @item: A #ShellRealmItem instance for a running realm
++ *
++ * Sends a DBUS request to change the current realm to this realm. This does not immediately
++ * influence any local state in GNOME shell. Once the realms daemon has changed the current realm
++ * it will emit a signal and the processing of that signal will update the local state.
++ */
++void
++shell_realm_item_set_current (ShellRealmItem *item) {
++  ShellRealmTracker *tracker = shell_realm_tracker_get_default();
++  if (item && item->realm_name) {
++    shell_realm_tracker_call_set_current (tracker, item->realm_name);
++  }
++}
++
++/**
++ * shell_realm_item_move_window_to_context:
++ * @item: A #ShellRealmItem instance for a running realm
++ * @window: A #MetaWindow for some window
++ *
++ * Move window to the currently active workspace in the #MetaWorkspaceContext for
++ * this realm.
++ */
++void
++shell_realm_item_move_window_to_context (ShellRealmItem *item, MetaWindow *window)
++{
++  shell_realm_item_acquire_context (item);
++
++  if (item->context) {
++    meta_workspace_context_move_window_to_context (item->context, window);
++  } else {
++    g_warning ("ShellRealmItem: Attempted to move window to realm '%s' which has no workspace context", item->realm_name);
++  }
++}
++
++static gboolean
++is_flag_set(guint8 status, guchar flag)
++{
++  return ((status & flag) != 0) ? TRUE : FALSE;
++}
++
++static gboolean
++has_status_flag (ShellRealmItem *item, guchar flag)
++{
++  return is_flag_set (item->status, flag);
++}
++
++static void
++set_status_flag (ShellRealmItem *item, guint8 flag, gboolean value)
++{
++  if (value) {
++    item->status |= flag;
++  } else {
++    item->status &= ~flag;
++  }
++}
++
++/**
++ * shell_realm_item_is_current:
++ * @item: A #ShellRealmItem instance
++ *
++ * Returns: %TRUE if this #ShellRealmItem is the current realm
++ */
++gboolean
++shell_realm_item_is_current (ShellRealmItem *item)
++{
++  return has_status_flag (item, REALM_STATUS_CURRENT);
++}
++
++/**
++ * shell_realm_item_is_running:
++ * @item: A #ShellRealmItem instance
++ *
++ * Returns: %TRUE if this #ShellRealmItem is running
++ */
++gboolean
++shell_realm_item_is_running (ShellRealmItem *item)
++{
++  return has_status_flag (item, REALM_STATUS_RUNNING);
++}
++
++/**
++ * shell_realm_item_is_system:
++ * @item: A #ShellRealmItem instance
++ *
++ * Returns: %TRUE if this #ShellRealmItem is a system realm
++ */
++gboolean
++shell_realm_item_is_system (ShellRealmItem *item)
++{
++  return has_status_flag (item, REALM_STATUS_SYSTEM);
++}
++
++
++void shell_realm_item_set_current_flag (ShellRealmItem *item, gboolean value)
++{
++  set_status_flag (item, REALM_STATUS_CURRENT, value);
++}
++
++void shell_realm_item_set_running_flag (ShellRealmItem *item, gboolean value)
++{
++  set_status_flag (item, REALM_STATUS_RUNNING, value);
++
++  if (!value && item->context) {
++    g_clear_object(&item->context);
++  }
++}
++
++
++void shell_realm_item_update (ShellRealmItem *item, const char *realm_name, const char *namespace, guint8 status)
++{
++  if (g_strcmp0 (item->realm_name, realm_name)) {
++    g_message ("ShellRealmItem: Realm name changed from %s to %s", item->realm_name, realm_name);
++    g_free (item->realm_name);
++    item->realm_name = g_strdup (realm_name);
++  }
++
++  if (g_strcmp0 (item->namespace, namespace)) {
++    g_free(item->namespace);
++    item->namespace = g_strdup (namespace);
++  }
++
++  if (item->status != status) {
++    gboolean was_running = has_status_flag (item, REALM_STATUS_RUNNING);
++    gboolean is_running = is_flag_set (status, REALM_STATUS_RUNNING);
++    gboolean stopped = was_running && !is_running;
++
++    item->status = status;
++
++    if (stopped) {
++      g_clear_object(&item->context);
++    }
++  }
++}
++
++void
++shell_realm_item_set_tagged (ShellRealmItem *item, gboolean is_tagged)
++{
++  item->tagged = is_tagged;
++}
++
++gboolean
++shell_realm_item_is_tagged (ShellRealmItem *item)
++{
++  return item->tagged;
++}
++
++static void shell_realm_item_get_property (GObject *gobject,
++                                           guint prop_id,
++                                           GValue *value,
++                                           GParamSpec *pspec)
++{
++  ShellRealmItem *item = SHELL_REALM_ITEM (gobject);
++  switch (prop_id) {
++    case PROP_ITEM_REALM_NAME:
++      g_value_set_string (value, shell_realm_item_get_realm_name (item));
++      break;
++    case PROP_ITEM_DESCRIPTION:
++      g_value_set_string (value, shell_realm_item_get_description (item));
++      break;
++    case PROP_ITEM_NAMESPACE:
++      g_value_set_string (value, shell_realm_item_get_namespace (item));
++      break;
++    default:
++      G_OBJECT_WARN_INVALID_PROPERTY_ID (gobject, prop_id, pspec);
++      break;
++  }
++}
++
++static void shell_realm_item_dispose (GObject *object)
++{
++  ShellRealmItem *item = SHELL_REALM_ITEM (object);
++  g_clear_object(&item->context);
++  item->disposed = TRUE;
++  G_OBJECT_CLASS(shell_realm_item_parent_class)->dispose (object);
++}
++
++static void
++shell_realm_item_finalize (GObject *object)
++{
++  ShellRealmItem *item = SHELL_REALM_ITEM (object);
++  g_message("ShellRealmItem: finalize (%s)", item->realm_name);
++  g_free (item->realm_name);
++  g_free (item->description);
++  g_free (item->namespace);
++
++  G_OBJECT_CLASS(shell_realm_item_parent_class)->finalize (object);
++}
++
++static void
++shell_realm_item_class_init (ShellRealmItemClass *klass)
++{
++  GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
++
++  gobject_class->get_property = shell_realm_item_get_property;
++  gobject_class->dispose = shell_realm_item_dispose;
++  gobject_class->finalize = shell_realm_item_finalize;
++
++  g_object_class_install_property (gobject_class,
++                                   PROP_ITEM_NAMESPACE,
++                                   g_param_spec_string ("namespace",
++                                                        "Context Namespace",
++                                                        "PID namespace of context",
++                                                        NULL,
++                                                        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
++  g_object_class_install_property (gobject_class,
++                                   PROP_ITEM_REALM_NAME,
++                                   g_param_spec_string ("realm-name",
++                                                        "Realm Name",
++                                                        "Name of realm associated with this context",
++                                                        NULL,
++                                                        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
++
++  g_object_class_install_property (gobject_class,
++                                   PROP_ITEM_DESCRIPTION,
++                                   g_param_spec_string ("description",
++                                                        "Realm Description",
++                                                        "Optional description of realm",
++                                                        NULL,
++                                                        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
++}
+\ No newline at end of file
+diff --git a/src/shell-realm-item.h b/src/shell-realm-item.h
+new file mode 100644
+index 0000000..8e9d8ec
+--- /dev/null
++++ b/src/shell-realm-item.h
+@@ -0,0 +1,35 @@
++#ifndef __SHELL_REALM_ITEM_H__
++#define __SHELL_REALM_ITEM_H__
++
++#include <glib-object.h>
++#include <meta/window.h>
++
++#define SHELL_TYPE_REALM_ITEM (shell_realm_item_get_type())
++G_DECLARE_FINAL_TYPE (ShellRealmItem, shell_realm_item, SHELL, REALM_ITEM, GObject)
++
++ShellRealmItem *shell_realm_item_new (const char *realm_name, const char *description, const char *namespace, guint8 status);
++
++const char *shell_realm_item_get_realm_name (ShellRealmItem *item);
++const char *shell_realm_item_get_description (ShellRealmItem *item);
++const char *shell_realm_item_get_namespace (ShellRealmItem *item);
++guint shell_realm_item_get_context_id (ShellRealmItem *item);
++MetaWorkspace *shell_realm_item_get_active_workspace (ShellRealmItem *item);
++
++void shell_realm_item_update (ShellRealmItem *item, const char *realm_name, const char *namespace, guint8 status);
++
++
++void shell_realm_item_set_current_flag (ShellRealmItem *item, gboolean value);
++void shell_realm_item_set_running_flag (ShellRealmItem *item, gboolean value);
++
++void shell_realm_item_activate_context (ShellRealmItem *item);
++void shell_realm_item_set_current (ShellRealmItem *item);
++void shell_realm_item_move_window_to_context (ShellRealmItem *item, MetaWindow *window);
++gboolean shell_realm_item_is_current(ShellRealmItem *item);
++gboolean shell_realm_item_is_running(ShellRealmItem *item);
++gboolean shell_realm_item_is_system(ShellRealmItem *item);
++
++void shell_realm_item_set_tagged (ShellRealmItem *item, gboolean is_tagged);
++gboolean shell_realm_item_is_tagged (ShellRealmItem *item);
++
++void shell_realm_item_acquire_context (ShellRealmItem *item);
++#endif //__SHELL_REALM_ITEM_H__
+diff --git a/src/shell-realm-tracker.c b/src/shell-realm-tracker.c
+new file mode 100644
+index 0000000..97cb6ed
+--- /dev/null
++++ b/src/shell-realm-tracker.c
+@@ -0,0 +1,297 @@
++#include "shell-realm-tracker.h"
++#include "shell-realms-private.h"
++
++#define NUM_BUS_SIGNAL_IDS 5
++
++#define REALMS_BUS_NAME "com.subgraph.realms"
++#define REALMS_OBJECT_PATH "/com/subgraph/realms"
++#define REALMS_MANAGER_INTERFACE "com.subgraph.realms.Manager"
++
++struct _ShellRealmTracker {
++    GObject parent;
++    GDBusConnection *dbus;
++    guint realms_watch_id;
++    guint bus_signal_ids[NUM_BUS_SIGNAL_IDS];
++    gboolean destroy_in_progress;
++};
++
++G_DEFINE_TYPE (ShellRealmTracker, shell_realm_tracker, G_TYPE_OBJECT);
++
++static void
++shell_realm_tracker_init (ShellRealmTracker *tracker)
++{
++  tracker->dbus = NULL;
++  tracker->realms_watch_id = 0;
++  tracker->destroy_in_progress = FALSE;
++}
++
++static void
++shell_realm_tracker_class_init (ShellRealmTrackerClass *klass)
++{
++}
++
++static void
++on_realm_bus_signal(GDBusConnection *connection, 
++                const gchar *sender_name, 
++                const gchar *object_path, 
++                const gchar *interface_name, 
++                const gchar *signal_name,
++                GVariant    *parameters,
++                gpointer    user_data)
++{
++  ShellRealms *realms = shell_realms_get_default();
++
++  const gchar *realm_name = NULL;
++  const gchar *description = NULL;
++  const gchar *namespace = NULL;
++  guint8 status = 0;
++
++  g_message ("ShellRealmTracker: on_realm_bus_signal(%s)", signal_name);
++
++  if (g_str_equal (signal_name, "RealmStarted")) {
++
++    g_variant_get (parameters, "(&s&sy)", &realm_name, &namespace, &status);
++    shell_realms_on_realm_started (realms, realm_name, namespace, status);
++
++  } else if (g_str_equal (signal_name, "RealmStopped")) {
++
++    g_variant_get (parameters, "(&sy)", &realm_name, &status);
++    shell_realms_on_realm_stopped (realms, realm_name);
++
++  } else if (g_str_equal (signal_name, "RealmRemoved")) {
++
++    g_variant_get (parameters, "(&s)", &realm_name);
++    shell_realms_on_realm_removed (realms, realm_name);
++
++  } else if (g_str_equal (signal_name, "RealmCurrent")) {
++
++    g_variant_get (parameters, "(&sy)", &realm_name, &status);
++    shell_realms_on_realm_current (realms, realm_name);
++
++  } else if (g_str_equal (signal_name, "RealmNew")) {
++
++    g_variant_get (parameters, "(&s&sy)", &realm_name, &description, status);
++    shell_realms_on_realm_new (realms, realm_name, description, status);
++
++  } else {
++    g_warning("Unexpected signal name '%s' received from realms manager DBUS", signal_name);
++  }
++}
++
++static void
++realm_state_process_elements (ShellRealmTracker *self, GVariant *response)
++{
++
++  GVariantIter *iter = NULL;
++  const gchar *name = NULL;
++  const gchar *description = NULL;
++  const gchar *namespace = NULL;
++  guchar status = 0;
++
++  ShellRealms *realms = shell_realms_get_default();
++  shell_realms_untag_all (realms);
++
++  g_variant_get(response, "(a(ssssy))", &iter);
++
++  // (name, desc, realmfs, namespace, status)
++  while (g_variant_iter_next(iter, "(&s&ss&sy)", &name, &description, NULL, &namespace, &status)) {
++    shell_realms_update_realm (realms, name, description, namespace, status);
++  }
++
++  shell_realms_remove_untagged (realms);
++  g_variant_iter_free(iter);
++}
++
++static void
++request_realm_state_finish(GObject *object, GAsyncResult *result, gpointer data) 
++{
++  ShellRealmTracker *self = data;
++
++  GError *error = NULL;
++
++  GVariant *response = g_dbus_connection_call_finish (G_DBUS_CONNECTION(object), result, &error);
++
++  if (!response) {
++    if (!g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
++      g_warning("MetaRealmDbus: Error calling 'List' bus method: %s", error->message);
++    }
++    g_clear_error (&error);
++    return;
++  }
++
++  if (self->destroy_in_progress) {
++    g_variant_unref (response);
++    return;
++  }
++
++  realm_state_process_elements(self, response);
++  g_variant_unref(response);
++}
++
++static void
++call_dbus_method (ShellRealmTracker *self, const gchar *method, GVariant *parameters, GAsyncReadyCallback callback, gpointer user_data)
++{
++  if (!self->dbus) {
++    g_warning("ShellRealmTracker: call_dbus_method(%s) called when no bus connection present", method);
++    return;
++  }
++
++  g_dbus_connection_call(self->dbus,
++                         REALMS_BUS_NAME,
++                         REALMS_OBJECT_PATH,
++                         REALMS_MANAGER_INTERFACE,
++                         method,
++                         parameters,
++                         NULL,
++                         G_DBUS_CALL_FLAGS_NO_AUTO_START,
++                         -1,
++                         NULL,
++                         callback,
++                         user_data);
++}
++
++static void
++request_realm_state(ShellRealmTracker *self)
++{
++  call_dbus_method (self, "List", NULL, request_realm_state_finish, self);
++}
++
++void
++shell_realm_tracker_call_set_current (ShellRealmTracker *self, const char *realm_name)
++{
++  call_dbus_method (self, "SetCurrent", g_variant_new("(s)", realm_name), NULL, NULL);
++}
++
++
++static void
++unsubscribe_signals (ShellRealmTracker *self)
++{
++  for (int i = 0; i < NUM_BUS_SIGNAL_IDS; i++) {
++    if (self->bus_signal_ids[i]) {
++      if (self->dbus) {
++        g_dbus_connection_signal_unsubscribe(self->dbus, self->bus_signal_ids[i]);
++      }
++      self->bus_signal_ids[i] = 0;
++    }
++  }
++}
++
++static guint
++bus_signal_subscribe (ShellRealmTracker *self, const gchar *signal_name)
++{
++    g_assert(self->dbus);
++
++    return g_dbus_connection_signal_subscribe(self->dbus,
++            REALMS_BUS_NAME,
++            REALMS_MANAGER_INTERFACE,
++            signal_name,
++            REALMS_OBJECT_PATH,
++            NULL,
++            G_DBUS_SIGNAL_FLAGS_NONE,
++            on_realm_bus_signal,
++            self,
++            NULL);
++}
++
++static void
++subscribe_bus_signals (ShellRealmTracker *self)
++{
++    if (self->dbus) {
++        int idx = 0;
++        self->bus_signal_ids[idx++] = bus_signal_subscribe(self, "RealmStarted");
++        self->bus_signal_ids[idx++] = bus_signal_subscribe(self, "RealmStopped");
++        self->bus_signal_ids[idx++] = bus_signal_subscribe(self, "RealmCurrent");
++        self->bus_signal_ids[idx++] = bus_signal_subscribe(self, "RealmNew");
++        self->bus_signal_ids[idx++] = bus_signal_subscribe(self, "RealmRemoved");
++        g_assert(idx == NUM_BUS_SIGNAL_IDS);
++    }
++}
++
++static void
++on_realm_manager_appeared (GDBusConnection *connection, const gchar *name, const gchar *name_owner, gpointer user_data)
++{
++  ShellRealmTracker *self = user_data;
++
++  // Avoid processing spurious events while destroying 'self'
++  if (self->destroy_in_progress) {
++      return;
++  }
++
++  if (!self->dbus) {
++      self->dbus = g_object_ref(connection);
++      subscribe_bus_signals (self);
++  } else {
++      g_warning("Realm tracker already has a connection in on_realm_manager_appeared()");
++  }
++
++  request_realm_state (self);
++}
++
++
++static void
++on_realm_manager_vanished (GDBusConnection *connection, const gchar *name, gpointer user_data)
++{
++  ShellRealmTracker *self = user_data;
++
++  // Avoid processing spurious events while destroying 'self'
++  if (self->destroy_in_progress) {
++    return;
++  }
++
++  if (!connection) {
++    g_clear_object (&self->dbus);
++  }
++
++  unsubscribe_signals(self);
++}
++
++/**
++ * shell_realm_tracker_get_default:
++ *
++ * Return Value: (transfer none): The global #ShellRealmTracker singleton
++ */
++ShellRealmTracker *
++shell_realm_tracker_get_default(void)
++{
++  static ShellRealmTracker *instance;
++  if (instance == NULL) {
++    instance = g_object_new (SHELL_TYPE_REALM_TRACKER, NULL);
++  }
++  return instance;
++}
++
++void shell_realm_tracker_start ()
++{
++  ShellRealmTracker *tracker = shell_realm_tracker_get_default();
++
++  if (tracker->realms_watch_id) {
++    g_warning ("ShellRealmTracker: shell_realm_tracker_start() called when already started");
++    return;
++  }
++
++  tracker->realms_watch_id = g_bus_watch_name(G_BUS_TYPE_SYSTEM,
++                                           REALMS_BUS_NAME,
++                                           G_BUS_NAME_WATCHER_FLAGS_NONE,
++                                           on_realm_manager_appeared,
++                                           on_realm_manager_vanished,
++                                           tracker,
++                                           g_free);
++
++}
++
++void
++shell_realm_tracker_destroy(ShellRealmTracker *self)
++{
++  if (self->dbus) {
++    unsubscribe_signals (self);
++    g_clear_object (&self->dbus);
++  }
++
++  // event handlers check this and will bail early in case there are
++  // any in queue. see docs for g_bus_unwatch_name()
++  self->destroy_in_progress = TRUE;
++
++  // frees 'self' in destroy notifier
++  g_bus_unwatch_name(self->realms_watch_id);
++
++}
+diff --git a/src/shell-realm-tracker.h b/src/shell-realm-tracker.h
+new file mode 100644
+index 0000000..a979f95
+--- /dev/null
++++ b/src/shell-realm-tracker.h
+@@ -0,0 +1,14 @@
++#ifndef __SHELL_REALM_TRACKER_H__
++#define __SHELL_REALM_TRACKER_H__
++
++#include <glib-object.h>
++
++#define SHELL_TYPE_REALM_TRACKER (shell_realm_tracker_get_type ())
++G_DECLARE_FINAL_TYPE (ShellRealmTracker, shell_realm_tracker,
++                      SHELL, REALM_TRACKER, GObject)
++
++ShellRealmTracker *shell_realm_tracker_get_default(void);
++void shell_realm_tracker_call_set_current (ShellRealmTracker *self, const char *realm_name);
++void shell_realm_tracker_start ();
++
++#endif /* __SHELL_REALM_TRACKER_H__ */
+diff --git a/src/shell-realms-private.h b/src/shell-realms-private.h
+new file mode 100644
+index 0000000..16a81b2
+--- /dev/null
++++ b/src/shell-realms-private.h
+@@ -0,0 +1,21 @@
++#ifndef __SHELL_REALMS_PRIVATE_H__
++#define __SHELL_REALMS_PRIVATE_H__
++#include <glib-object.h>
++#include "shell-realms.h"
++
++
++void shell_realms_untag_all (ShellRealms *realms);
++void shell_realms_remove_untagged (ShellRealms *realms);
++void shell_realms_update_realm (ShellRealms *realms,
++                                const char *realm_name,
++                                const char *description,
++                                const char *namespace,
++                                guint8 status);
++
++void shell_realms_on_realm_started (ShellRealms *realms, const gchar *realm_name, const gchar *namespace, guint8 status);
++void shell_realms_on_realm_current (ShellRealms *realms, const gchar *realm_name);
++void shell_realms_on_realm_stopped (ShellRealms *realms, const gchar *realm_name);
++void shell_realms_on_realm_removed (ShellRealms *realms, const gchar *realm_name);
++void shell_realms_on_realm_new (ShellRealms *realms, const gchar *realm_name, const gchar *description, guint8 status);
++
++#endif //__SHELL_REALMS_PRIVATE_H__
+diff --git a/src/shell-realms.c b/src/shell-realms.c
+new file mode 100644
+index 0000000..44ee2b7
+--- /dev/null
++++ b/src/shell-realms.c
+@@ -0,0 +1,442 @@
++
++#include <meta/display.h>
++#include <meta/meta-workspace-manager.h>
++#include "shell-realm-item.h"
++#include "shell-realm-tracker.h"
++#include "shell-realms-private.h"
++#include "shell-global.h"
++
++struct _ShellRealms {
++    GObject parent;
++    GHashTable *realms;
++    GList *running_realms;
++    ShellRealmItem *current_realm;
++};
++
++G_DEFINE_TYPE (ShellRealms, shell_realms, G_TYPE_OBJECT);
++
++enum {
++    REALM_CONTEXT_SWITCHED,
++    LAST_SIGNAL,
++};
++
++enum {
++    PROP_0,
++    PROP_CURRENT_REALM,
++};
++
++static guint shell_realms_signals [LAST_SIGNAL] = { 0 };
++
++/**
++ * shell_realms_current_realm:
++ * @realms: A #ShellRealms instance
++ *
++ * Returns: (transfer none) (nullable): The current realm as a #ShellRealmItem
++ *  or %NULL if no realm is current.
++ */
++ShellRealmItem *
++shell_realms_current_realm (ShellRealms *realms)
++{
++  return realms->current_realm;
++}
++
++/**
++ * shell_realms_realm_by_name:
++ * @realms: a #ShellRealms instance
++ * @realm_name: The name of a realm to look up
++ *
++ * Returns: (transfer none) (nullable): A realm #ShellRealmItem or %NULL
++ *  if name not found
++ */
++ShellRealmItem *
++shell_realms_realm_by_name(ShellRealms *realms, const gchar *realm_name)
++{
++  ShellRealmItem *item = g_hash_table_lookup (realms->realms, realm_name);
++  if (!item) {
++    g_warning("ShellRealms: No realm found for name '%s'", realm_name);
++  }
++  return item;
++}
++
++/**
++ * shell_realms_realm_by_context_id:
++ * @realms: a #ShellRealms instance
++ * @context_id: A context id to search for.
++ *
++ * Returns: (transfer none) (nullable): The realm #ShellRealmItem for the realm
++ * with a workspace context id matching the specified value or %NULL if no such realm is found
++ */
++ShellRealmItem *
++shell_realms_realm_by_context_id (ShellRealms *realms, guint context_id)
++{
++  if (context_id == 0) {
++    return NULL;
++  }
++
++  for (GList *iter = realms->running_realms; iter; iter = iter->next) {
++    ShellRealmItem *item = iter->data;
++    if (shell_realm_item_get_context_id (item) == context_id) {
++      return item;
++    }
++  }
++  return NULL;
++}
++
++/**
++ * shell_realms_realm_by_window:
++ * @realms: a #ShellRealms instance
++ * @window: A window to find the corresponding realm for.
++ *
++ * Returns: (transfer none) (nullable): The realm #ShellRealmItem for the realm
++ * the application the window belongs to is running in or %NULL if no realm is found
++ */
++ShellRealmItem *
++shell_realms_realm_by_window (ShellRealms *realms, MetaWindow *window)
++{
++  const char *window_ns = meta_window_namespace (window);
++
++  if (!window_ns) {
++    return NULL;
++  }
++
++  for (GList *iter = realms->running_realms; iter; iter = iter->next) {
++    ShellRealmItem *item = iter->data;
++    if (g_strcmp0 (window_ns, shell_realm_item_get_namespace (item)) == 0) {
++      return item;
++    }
++  }
++  return NULL;
++}
++
++/**
++ * shell_realms_is_citadel_window:
++ * @realms: A #ShellRealms instance
++ * @window: A #MetaWindow
++ *
++ * Return #TRUE if the window belongs to an application running inside of Citadel
++ * rather than running in a realm.
++ *
++ * Returns: If window belongs to an application running in Citadel return #True
++ */
++gboolean
++shell_realms_is_citadel_window (ShellRealms *realms, MetaWindow *window)
++{
++  MetaDisplay *display = shell_global_get_display (shell_global_get());
++  MetaWorkspaceManager *workspace_manager = meta_display_get_workspace_manager (display);
++
++  const char *mutter_ns = meta_workspace_manager_mutter_namespace (workspace_manager);
++  const char *window_ns = meta_window_namespace (window);
++
++  return g_strcmp0 (mutter_ns, window_ns) == 0;
++}
++
++/**
++ * shell_realms_get_running_realms:
++ * @realms: the #ShellRealms instance
++ *
++ * Returns all running realms as a list of #ShellRealmItem
++ *
++ * Returns: (transfer none) (element-type ShellRealmItem): a list of
++ * #ShellRealmItem for all running realms.
++ *
++ */
++GList *
++shell_realms_get_running_realms (ShellRealms *realms)
++{
++  return realms->running_realms;
++}
++
++/**
++ * shell_realms_get_all_realms:
++ * @realms: the #ShellRealms instance
++ *
++ * Returns all realms as a list of #ShellRealmItem
++ *
++ * Returns: (transfer container) (element-type ShellRealmItem): all realms as
++ * a list of #ShellRealmItem
++ */
++GList *
++shell_realms_get_all_realms (ShellRealms *realms)
++{
++  return g_hash_table_get_values (realms->realms);
++}
++
++static gboolean
++shell_realms_is_on_running_list (ShellRealms *realms, ShellRealmItem *item)
++{
++  return (g_list_index (realms->running_realms, item) >= 0);
++}
++
++static void
++shell_realms_remove_running_realm (ShellRealms *realms, ShellRealmItem *item)
++{
++
++  if (!shell_realms_is_on_running_list (realms, item)) {
++    return;
++  }
++
++  realms->running_realms = g_list_remove(realms->running_realms, item);
++  g_object_unref (item);
++}
++
++static void
++shell_realms_update_running_list_for_item (ShellRealms *realms, ShellRealmItem *item)
++{
++  gboolean running = shell_realm_item_is_running (item);
++
++  if (running) {
++    if (!shell_realms_is_on_running_list (realms, item)) {
++      realms->running_realms = g_list_append (realms->running_realms, g_object_ref (item));
++    }
++
++    // If realm is current realm, make sure it's at the front of the list
++    if (shell_realm_item_is_current (item) && g_list_index (realms->running_realms, item) > 0) {
++      realms->running_realms = g_list_remove (realms->running_realms, item);
++      realms->running_realms = g_list_prepend (realms->running_realms, item);
++    }
++
++  } else {
++    shell_realms_remove_running_realm (realms, item);
++  }
++}
++
++static void
++shell_realms_set_current_item (ShellRealms *realms, ShellRealmItem *item)
++{
++  if (realms->current_realm == item) {
++    return;
++  } else if (realms->current_realm) {
++    shell_realm_item_set_current_flag (realms->current_realm, FALSE);
++  }
++
++  shell_realm_item_set_current_flag (item, TRUE);
++  realms->current_realm = item;
++}
++
++/*
++ * If a realm already exists for 'realm_name' update it with provided information, otherwise
++ * create a new ShellRealmItem and add it to hash table unless it is a system realm. Returns
++ * the existing or newly created ShellRealmItem or returns NULL if the realm is a system realm.
++ */
++static ShellRealmItem *
++shell_realms_add_realm_item (ShellRealms *realms,
++                             const char *realm_name,
++                             const char *description,
++                             const char *namespace,
++                             guint8 status)
++{
++  ShellRealmItem *item = g_hash_table_lookup (realms->realms, realm_name);
++  if (item) {
++    shell_realm_item_update (item, realm_name, namespace, status);
++    return item;
++  }
++
++  item = shell_realm_item_new (realm_name, description, namespace, status);
++
++  if (shell_realm_item_is_system (item)) {
++    g_clear_object(&item);
++    return NULL;
++  }
++  g_hash_table_insert (realms->realms, g_strdup (realm_name), item);
++  return item;
++}
++
++void
++shell_realms_update_realm (ShellRealms *realms,
++                           const char *realm_name,
++                           const char *description,
++                           const char *namespace,
++                           guint8 status)
++{
++  ShellRealmItem *item = shell_realms_add_realm_item (realms, realm_name, description, namespace, status);
++
++  // Ignore system realms
++  if (!item) {
++    return;
++  }
++
++  shell_realms_update_running_list_for_item (realms, item);
++  shell_realm_item_set_tagged (item, TRUE);
++
++  // If realm is current, make sure it has a context. This also ensures that the
++  // first context requested is for the current realm.
++  if (shell_realm_item_is_current (item)) {
++    shell_realms_set_current_item (realms, item);
++    shell_realm_item_acquire_context (item);
++  }
++}
++
++// When processing list of realms returned from "List" dbus method,
++//
++//  1) first all the existing realms are "untagged"
++//  2) As each realm on list is processed it is marked as "tagged"
++//  3) After processing list, realm items that are not tagged were not in list
++//     returned from server so remove them.
++//
++void
++shell_realms_untag_all (ShellRealms *realms)
++{
++  GList *item_list = g_hash_table_get_values (realms->realms);
++
++  for (GList *iter = item_list; iter; iter = iter->next) {
++    ShellRealmItem *item = iter->data;
++    shell_realm_item_set_tagged (item, FALSE);
++    iter = iter->next;
++  }
++  g_list_free (item_list);
++}
++
++void
++shell_realms_remove_untagged (ShellRealms *realms)
++{
++  GHashTableIter iter;
++  gpointer value;
++
++  g_hash_table_iter_init (&iter, realms->realms);
++  while (g_hash_table_iter_next (&iter, NULL, &value)) {
++    ShellRealmItem *item = value;
++    if (!shell_realm_item_is_tagged (item)) {
++      shell_realms_remove_running_realm (realms, item);
++      g_hash_table_iter_remove (&iter);
++    }
++  }
++}
++
++// Signal handlers
++
++void
++shell_realms_on_realm_started (ShellRealms *realms, const gchar *realm_name, const gchar *namespace, guint8 status)
++{
++  ShellRealmItem *item = shell_realms_realm_by_name (realms, realm_name);
++  if (item) {
++    shell_realm_item_update (item, realm_name, namespace, status);
++    if (!shell_realm_item_is_system (item)) {
++      shell_realms_update_running_list_for_item (realms, item);
++      shell_realm_item_acquire_context (item);
++    }
++  }
++}
++
++void
++shell_realms_on_realm_current (ShellRealms *realms, const gchar *realm_name)
++{
++  ShellRealmItem *item = shell_realms_realm_by_name (realms, realm_name);
++
++  if (realms->current_realm != item) {
++    shell_realms_set_current_item (realms, item);
++    shell_realms_update_running_list_for_item (realms, item);
++    shell_realm_item_activate_context (item);
++    g_signal_emit (realms, shell_realms_signals[REALM_CONTEXT_SWITCHED], 0);
++  }
++}
++
++void
++shell_realms_on_realm_stopped (ShellRealms *realms, const gchar *realm_name)
++{
++  ShellRealmItem *item = shell_realms_realm_by_name (realms, realm_name);
++  if (item) {
++    shell_realm_item_set_running_flag (item, FALSE);
++    shell_realms_remove_running_realm (realms, item);
++  }
++}
++
++void
++shell_realms_on_realm_removed (ShellRealms *realms, const gchar *realm_name)
++{
++  ShellRealmItem *item = shell_realms_realm_by_name (realms, realm_name);
++  if (item) {
++    shell_realms_remove_running_realm (realms, item);
++    g_hash_table_remove (realms->realms, realm_name);
++  }
++}
++
++void
++shell_realms_on_realm_new (ShellRealms *realms, const gchar *realm_name, const gchar *description, guint8 status)
++{
++  if (!g_hash_table_contains (realms->realms, realm_name)) {
++    (void) shell_realms_add_realm_item (realms, realm_name, description, NULL, status);
++  } else {
++    g_warning("ShellRealms: RealmNew signal received for realm '%s' but it already exists", realm_name);
++  }
++}
++
++/**
++ * shell_realms_get_default:
++ *
++ * Return Value: (transfer none): The global #ShellRealms singleton
++ */
++ShellRealms *
++shell_realms_get_default(void)
++{
++  static ShellRealms *instance;
++
++  if (instance == NULL) {
++    instance = g_object_new (SHELL_TYPE_REALMS, NULL);
++  }
++  return instance;
++}
++
++static void
++shell_realms_init(ShellRealms *realms)
++{
++  realms->realms = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
++  realms->running_realms = NULL;
++  realms->current_realm = NULL;
++}
++
++static void
++shell_realms_finalize (GObject *obj)
++{
++  ShellRealms *realms = SHELL_REALMS (obj);
++  realms->current_realm = NULL;
++  g_list_free_full (realms->running_realms, g_object_unref);
++  g_hash_table_destroy (realms->realms);
++  G_OBJECT_CLASS (shell_realms_parent_class)->finalize (obj);
++}
++
++static void
++shell_realms_get_property (GObject *gobject,
++                           guint prop_id,
++                           GValue *value,
++                           GParamSpec *pspec)
++{
++  ShellRealms *realms = SHELL_REALMS (gobject);
++
++  switch (prop_id) {
++    case PROP_CURRENT_REALM:
++      if (realms->current_realm) {
++        g_value_set_object (value, realms->current_realm);
++      }
++      break;
++
++    default:
++      G_OBJECT_WARN_INVALID_PROPERTY_ID (gobject, prop_id, pspec);
++      break;
++  }
++}
++
++static void
++shell_realms_class_init (ShellRealmsClass *klass)
++{
++
++  GObjectClass *object_class = G_OBJECT_CLASS (klass);
++
++  object_class->get_property = shell_realms_get_property;
++  object_class->finalize = shell_realms_finalize;
++
++  shell_realms_signals[REALM_CONTEXT_SWITCHED] =
++      g_signal_new ("realm-context-switched",
++                    G_TYPE_FROM_CLASS(klass),
++                    G_SIGNAL_RUN_LAST,
++                    0,
++                    NULL, NULL, NULL,
++                    G_TYPE_NONE, 0);
++
++  g_object_class_install_property (object_class,
++                                   PROP_CURRENT_REALM,
++                                   g_param_spec_object ("current-realm",
++                                                        "Current Realm",
++                                                        "The currently active realm",
++                                                        SHELL_TYPE_REALM_ITEM,
++                                                        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
++}
+diff --git a/src/shell-realms.h b/src/shell-realms.h
+new file mode 100644
+index 0000000..a1a3353
+--- /dev/null
++++ b/src/shell-realms.h
+@@ -0,0 +1,23 @@
++#ifndef __SHELL_REALMS_H__
++#define __SHELL_REALMS_H__
++
++#include <glib-object.h>
++#include <meta/window.h>
++#include "shell-realm-item.h"
++
++#define SHELL_TYPE_REALMS (shell_realms_get_type())
++G_DECLARE_FINAL_TYPE(ShellRealms, shell_realms, SHELL, REALMS, GObject)
++
++ShellRealms *shell_realms_get_default(void);
++
++
++ShellRealmItem *shell_realms_current_realm (ShellRealms *realms);
++ShellRealmItem *shell_realms_realm_by_name(ShellRealms *realms, const gchar *realm_name);
++ShellRealmItem *shell_realms_realm_by_context_id (ShellRealms *realms, guint context_id);
++ShellRealmItem *shell_realms_realm_by_window (ShellRealms *realms, MetaWindow *window);
++gboolean shell_realms_is_citadel_window (ShellRealms *realms, MetaWindow *window);
++
++GList *shell_realms_get_running_realms (ShellRealms *realms);
++GList *shell_realms_get_all_realms (ShellRealms *realms);
++
++#endif //__SHELL_REALMS_H__
+diff --git a/src/shell-window-tracker.c b/src/shell-window-tracker.c
+index 5c9d2ec..0ca7004 100644
+--- a/src/shell-window-tracker.c
++++ b/src/shell-window-tracker.c
+@@ -15,6 +15,7 @@
+ #include "shell-window-tracker-private.h"
+ #include "shell-app-private.h"
+ #include "shell-global.h"
++#include "shell-realms.h"
+ #include "st.h"
+ 
+ /* This file includes modified code from
+@@ -129,6 +130,22 @@ check_app_id_prefix (ShellApp   *app,
+   return g_str_has_prefix (shell_app_get_id (app), prefix);
+ }
+ 
++static const char *
++get_window_realm_name (MetaWindow *window) {
++
++  ShellRealms *realms = shell_realms_get_default();
++  if (shell_realms_is_citadel_window (realms, window)) {
++    return NULL;
++  }
++  ShellRealmItem *item = shell_realms_realm_by_window(realms, window);
++
++  if (item) {
++    return shell_realm_item_get_realm_name (item);
++  } else {
++    return NULL;
++  }
++}
++
+ /*
+  * get_app_from_window_wmclass:
+  *
+@@ -146,6 +163,7 @@ get_app_from_window_wmclass (MetaWindow  *window)
+   const char *wm_class;
+   const char *wm_instance;
+   const char *sandbox_id;
++  const char *realm_name;
+   g_autofree char *app_prefix = NULL;
+ 
+   appsys = shell_app_system_get_default ();
+@@ -154,6 +172,9 @@ get_app_from_window_wmclass (MetaWindow  *window)
+   if (sandbox_id)
+     app_prefix = g_strdup_printf ("%s.", sandbox_id);
+ 
++  realm_name = get_window_realm_name (window);
++
++  g_warning ("ShellWindowTracker: get_app_from_window_wmclass() realm_name=%s", realm_name ? realm_name : "None");
+   /* Notes on the heuristics used here:
+      much of the complexity here comes from the desire to support
+      Chrome apps.
+@@ -191,23 +212,23 @@ get_app_from_window_wmclass (MetaWindow  *window)
+ 
+   /* first try a match from WM_CLASS (instance part) to StartupWMClass */
+   wm_instance = meta_window_get_wm_class_instance (window);
+-  app = shell_app_system_lookup_startup_wmclass (appsys, wm_instance);
++  app = shell_app_system_lookup_startup_wmclass (appsys, wm_instance, realm_name);
+   if (app != NULL && check_app_id_prefix (app, app_prefix))
+     return g_object_ref (app);
+ 
+   /* then try a match from WM_CLASS to StartupWMClass */
+   wm_class = meta_window_get_wm_class (window);
+-  app = shell_app_system_lookup_startup_wmclass (appsys, wm_class);
++  app = shell_app_system_lookup_startup_wmclass (appsys, wm_class, realm_name);
+   if (app != NULL && check_app_id_prefix (app, app_prefix))
+     return g_object_ref (app);
+ 
+   /* then try a match from WM_CLASS (instance part) to .desktop */
+-  app = shell_app_system_lookup_desktop_wmclass (appsys, wm_instance);
++  app = shell_app_system_lookup_desktop_wmclass (appsys, wm_instance, realm_name);
+   if (app != NULL && check_app_id_prefix (app, app_prefix))
+     return g_object_ref (app);
+ 
+   /* finally, try a match from WM_CLASS to .desktop */
+-  app = shell_app_system_lookup_desktop_wmclass (appsys, wm_class);
++  app = shell_app_system_lookup_desktop_wmclass (appsys, wm_class, realm_name);
+   if (app != NULL && check_app_id_prefix (app, app_prefix))
+     return g_object_ref (app);
+ 
+@@ -236,7 +257,19 @@ get_app_from_id (MetaWindow  *window,
+ 
+   appsys = shell_app_system_get_default ();
+ 
+-  desktop_file = g_strconcat (id, ".desktop", NULL);
++  const char *realm_name = NULL;
++  ShellRealms *realms = shell_realms_get_default();
++  ShellRealmItem *item = shell_realms_realm_by_window (realms, window);
++
++  if (item) {
++    realm_name = shell_realm_item_get_realm_name (item);
++  }
++
++  if (realm_name) {
++    desktop_file = g_strconcat ("realm-", realm_name, ".", id, ".desktop", NULL);
++  } else {
++    desktop_file = g_strconcat (id, ".desktop", NULL);
++  }
+   app = shell_app_system_lookup_app (appsys, desktop_file);
+   if (app)
+     return g_object_ref (app);

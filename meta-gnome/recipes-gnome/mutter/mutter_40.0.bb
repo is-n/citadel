@@ -44,8 +44,10 @@ inherit gnomebase gsettings gobject-introspection gettext upstream-version-is-ev
 def gnome_verdir(v):
     return oe.utils.trim_version(v, 1)
 
-SRC_URI = "${GNOME_MIRROR}/${GNOMEBN}/${@gnome_verdir("${PV}")}/${GNOMEBN}-${PV}.tar.${GNOME_COMPRESS_TYPE};name=archive"
-SRC_URI += " file://0001-Fix-libmutter_dep-in-meson.build-for-Citadel-builds.patch"
+SRC_URI = "${GNOME_MIRROR}/${GNOMEBN}/${@gnome_verdir("${PV}")}/${GNOMEBN}-${PV}.tar.${GNOME_COMPRESS_TYPE};name=archive \
+           file://0001-Fix-libmutter_dep-in-meson.build-for-Citadel-builds.patch \
+           file://0001-Citadel-changes-to-Mutter.patch \
+           "
 
 SRC_URI[archive.sha256sum] = "7a71b312e5a667c5374895188a506a3f6b671768bcb362b68efdc562773d198e"
 

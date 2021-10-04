@@ -17,6 +17,7 @@ SRC_URI = "${GNOME_MIRROR}/${GNOMEBN}/${@gnome_verdir("${PV}")}/${GNOMEBN}-${PV}
            file://0001-do-not-use-python-path-from-build-environment.patch \
            file://0001-Remove-calendar-server-fix-build.patch \
            file://0001-Remove-log-out-label-from-power-off-in-status-UI.patch \
+           file://0001-Citadel-Gnome-Shell-changes.patch \
            "
 
 SRC_URI[archive.sha256sum] = "bce71f402dfaa9c5e269bf65bf48a22343d896e6cf9a2c34669392d7fbf68478"
