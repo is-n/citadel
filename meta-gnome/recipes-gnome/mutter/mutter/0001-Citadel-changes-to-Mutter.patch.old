@@ -1,6 +1,6 @@
-From 1b27f150bf7656cade484925da726daf9a52dd6b Mon Sep 17 00:00:00 2001
+From c203de9ad5f88eb48f749cda1b5a6c8896a2af15 Mon Sep 17 00:00:00 2001
 From: Bruce Leidl <bruce@subgraph.com>
-Date: Mon, 4 Oct 2021 13:10:48 +0000
+Date: Mon, 4 Oct 2021 07:19:16 -0400
 Subject: [PATCH] Citadel changes to Mutter
 
 ---
@@ -21,10 +21,10 @@ Subject: [PATCH] Citadel changes to Mutter
  14 files changed, 786 insertions(+), 85 deletions(-)
 
 diff --git a/src/compositor/compositor.c b/src/compositor/compositor.c
-index 9cdd39c..879950a 100644
+index 1770550..d1eb7f8 100644
 --- a/src/compositor/compositor.c
 +++ b/src/compositor/compositor.c
-@@ -747,8 +747,13 @@ meta_compositor_switch_workspace (MetaCompositor     *compositor,
+@@ -744,8 +744,13 @@ meta_compositor_switch_workspace (MetaCompositor     *compositor,
      meta_compositor_get_instance_private (compositor);
    gint to_indx, from_indx;
  
@@ -684,21 +684,21 @@ index 61fbc00..d7696a7 100644
 +  return context->id != window->workspace->context_id;
 +}
 diff --git a/src/core/util-private.h b/src/core/util-private.h
-index 01b6639..27d480e 100644
+index 0d68a72..834b3e2 100644
 --- a/src/core/util-private.h
 +++ b/src/core/util-private.h
-@@ -58,4 +58,6 @@ void     meta_get_clutter_debug_flags (ClutterDebugFlag     *debug_flags,
-                                        ClutterDrawDebugFlag *draw_flags,
-                                        ClutterPickDebugFlag *pick_flags);
+@@ -43,4 +43,6 @@ void     meta_set_is_wayland_compositor (gboolean setting);
+ char *   meta_generate_random_id (GRand *rand,
+                                   int    length);
  
 +char *   meta_read_pid_namespace (pid_t pid);
 +
  #endif
 diff --git a/src/core/util.c b/src/core/util.c
-index 74a884c..17a13bd 100644
+index bbb5a24..57645e0 100644
 --- a/src/core/util.c
 +++ b/src/core/util.c
-@@ -794,3 +794,51 @@ meta_get_debug_paint_flags (void)
+@@ -741,3 +741,51 @@ meta_get_debug_paint_flags (void)
  {
    return debug_paint_flags;
  }
@@ -751,13 +751,13 @@ index 74a884c..17a13bd 100644
 +  return value;
 +}
 diff --git a/src/core/window-private.h b/src/core/window-private.h
-index 3bd75fe..293cc88 100644
+index d1730c9..6a55630 100644
 --- a/src/core/window-private.h
 +++ b/src/core/window-private.h
-@@ -568,6 +568,9 @@ struct _MetaWindow
+@@ -562,6 +562,9 @@ struct _MetaWindow
+   guint unmanage_idle_id;
  
-   gboolean has_valid_cgroup;
-   GFile *cgroup_path;
+   pid_t client_pid;
 +
 +  guint namespace_set: 1;
 +  gchar *namespace;
@@ -765,10 +765,10 @@ index 3bd75fe..293cc88 100644
  
  struct _MetaWindowClass
 diff --git a/src/core/window.c b/src/core/window.c
-index e543814..02164e0 100644
+index c843c62..c0b9e3f 100644
 --- a/src/core/window.c
 +++ b/src/core/window.c
-@@ -356,6 +356,7 @@ meta_window_finalize (GObject *object)
+@@ -345,6 +345,7 @@ meta_window_finalize (GObject *object)
    g_free (window->gtk_app_menu_object_path);
    g_free (window->gtk_menubar_object_path);
    g_free (window->placement.rule);
@@ -776,7 +776,7 @@ index e543814..02164e0 100644
  
    G_OBJECT_CLASS (meta_window_parent_class)->finalize (object);
  }
-@@ -1578,7 +1579,7 @@ meta_window_unmanage (MetaWindow  *window,
+@@ -1564,7 +1565,7 @@ meta_window_unmanage (MetaWindow  *window,
    g_assert (window->workspace == NULL);
  
  #ifndef G_DISABLE_CHECKS
@@ -785,7 +785,7 @@ index e543814..02164e0 100644
    while (tmp != NULL)
      {
        MetaWorkspace *workspace = tmp->data;
-@@ -4903,7 +4904,7 @@ set_workspace_state (MetaWindow    *window,
+@@ -4889,7 +4890,7 @@ set_workspace_state (MetaWindow    *window,
    else if (window->on_all_workspaces)
      {
        GList *l;
@@ -794,7 +794,7 @@ index e543814..02164e0 100644
          {
            MetaWorkspace *ws = l->data;
            meta_workspace_remove_window (ws, window);
-@@ -4918,7 +4919,7 @@ set_workspace_state (MetaWindow    *window,
+@@ -4904,7 +4905,7 @@ set_workspace_state (MetaWindow    *window,
    else if (window->on_all_workspaces)
      {
        GList *l;
@@ -803,7 +803,7 @@ index e543814..02164e0 100644
          {
            MetaWorkspace *ws = l->data;
            meta_workspace_add_window (ws, window);
-@@ -5276,8 +5277,10 @@ meta_window_change_workspace_by_index (MetaWindow *window,
+@@ -5203,8 +5204,10 @@ meta_window_change_workspace_by_index (MetaWindow *window,
    workspace =
      meta_workspace_manager_get_workspace_by_index (workspace_manager, space_index);
  
@@ -815,7 +815,7 @@ index e543814..02164e0 100644
  
    if (workspace)
      meta_window_change_workspace (window, workspace);
-@@ -5618,7 +5621,7 @@ meta_window_get_workspaces (MetaWindow *window)
+@@ -5528,7 +5531,7 @@ meta_window_get_workspaces (MetaWindow *window)
    MetaWorkspaceManager *workspace_manager = window->display->workspace_manager;
  
    if (window->on_all_workspaces)
@@ -824,7 +824,7 @@ index e543814..02164e0 100644
    else if (window->workspace != NULL)
      return window->workspace->list_containing_self;
    else if (window->constructing)
-@@ -8822,3 +8825,31 @@ meta_window_get_client_type (MetaWindow *window)
+@@ -8675,3 +8678,31 @@ meta_window_get_client_type (MetaWindow *window)
  {
    return window->client_type;
  }
@@ -858,7 +858,7 @@ index e543814..02164e0 100644
 +}
 \ No newline at end of file
 diff --git a/src/core/workspace-private.h b/src/core/workspace-private.h
-index f0d896f..38c3b4c 100644
+index a58b234..2e364a1 100644
 --- a/src/core/workspace-private.h
 +++ b/src/core/workspace-private.h
 @@ -39,6 +39,7 @@ struct _MetaWorkspace
@@ -879,7 +879,7 @@ index f0d896f..38c3b4c 100644
  void           meta_workspace_add_window    (MetaWorkspace *workspace,
                                               MetaWindow    *window);
 diff --git a/src/core/workspace.c b/src/core/workspace.c
-index 76ba87b..3ac18b8 100644
+index 321d3ef..633184d 100644
 --- a/src/core/workspace.c
 +++ b/src/core/workspace.c
 @@ -237,7 +237,7 @@ meta_workspace_init (MetaWorkspace *workspace)
@@ -933,7 +933,7 @@ index 76ba87b..3ac18b8 100644
  
    meta_workspace_clear_logical_monitor_data (workspace);
  
-@@ -403,8 +412,8 @@ meta_workspace_add_window (MetaWorkspace *workspace,
+@@ -381,8 +390,8 @@ meta_workspace_add_window (MetaWorkspace *workspace,
    if (window->struts)
      {
        meta_topic (META_DEBUG_WORKAREA,
@@ -944,7 +944,7 @@ index 76ba87b..3ac18b8 100644
        meta_workspace_invalidate_work_area (workspace);
      }
  
-@@ -432,8 +441,8 @@ meta_workspace_remove_window (MetaWorkspace *workspace,
+@@ -405,8 +414,8 @@ meta_workspace_remove_window (MetaWorkspace *workspace,
    if (window->struts)
      {
        meta_topic (META_DEBUG_WORKAREA,
@@ -955,7 +955,7 @@ index 76ba87b..3ac18b8 100644
        meta_workspace_invalidate_work_area (workspace);
      }
  
-@@ -486,6 +495,13 @@ workspace_switch_sound(MetaWorkspace *from,
+@@ -456,6 +465,13 @@ workspace_switch_sound(MetaWorkspace *from,
    int i, nw, x, y, fi, ti;
    const char *e;
  
@@ -969,7 +969,7 @@ index 76ba87b..3ac18b8 100644
    nw = meta_workspace_manager_get_n_workspaces (from->manager);
    fi = meta_workspace_index(from);
    ti = meta_workspace_index(to);
-@@ -566,9 +582,15 @@ meta_workspace_activate_with_focus (MetaWorkspace *workspace,
+@@ -536,9 +552,15 @@ meta_workspace_activate_with_focus (MetaWorkspace *workspace,
    MetaWorkspaceLayout layout1, layout2;
    gint num_workspaces, current_space, new_space;
    MetaMotionDirection direction;
@@ -987,7 +987,7 @@ index 76ba87b..3ac18b8 100644
  
    if (workspace->manager->active_workspace == workspace)
      {
-@@ -631,52 +653,59 @@ meta_workspace_activate_with_focus (MetaWorkspace *workspace,
+@@ -601,52 +623,59 @@ meta_workspace_activate_with_focus (MetaWorkspace *workspace,
     comp = meta_display_get_compositor (workspace->display);
     direction = 0;
  
@@ -1089,7 +1089,7 @@ index 76ba87b..3ac18b8 100644
  
     meta_compositor_switch_workspace (comp, old, workspace, direction);
  
-@@ -714,14 +743,19 @@ meta_workspace_activate (MetaWorkspace *workspace,
+@@ -683,14 +712,19 @@ meta_workspace_activate (MetaWorkspace *workspace,
  int
  meta_workspace_index (MetaWorkspace *workspace)
  {
@@ -1115,7 +1115,7 @@ index 76ba87b..3ac18b8 100644
  }
  
  void
-@@ -778,14 +812,14 @@ meta_workspace_invalidate_work_area (MetaWorkspace *workspace)
+@@ -747,14 +781,14 @@ meta_workspace_invalidate_work_area (MetaWorkspace *workspace)
    if (workspace->work_areas_invalid)
      {
        meta_topic (META_DEBUG_WORKAREA,
@@ -1134,7 +1134,7 @@ index 76ba87b..3ac18b8 100644
  
    /* If we are in the middle of a resize or move operation, we
     * might have cached pointers to the workspace's edges */
-@@ -956,8 +990,8 @@ ensure_work_areas_validated (MetaWorkspace *workspace)
+@@ -925,8 +959,8 @@ ensure_work_areas_validated (MetaWorkspace *workspace)
      }
    workspace->work_area_screen = work_area;
    meta_topic (META_DEBUG_WORKAREA,
@@ -1145,7 +1145,7 @@ index 76ba87b..3ac18b8 100644
                workspace->work_area_screen.x,
                workspace->work_area_screen.y,
                workspace->work_area_screen.width,
-@@ -987,8 +1021,8 @@ ensure_work_areas_validated (MetaWorkspace *workspace)
+@@ -956,8 +990,8 @@ ensure_work_areas_validated (MetaWorkspace *workspace)
  
        meta_topic (META_DEBUG_WORKAREA,
                    "Computed work area for workspace %d "
@@ -1156,7 +1156,7 @@ index 76ba87b..3ac18b8 100644
                    logical_monitor->number,
                    data->logical_monitor_work_area.x,
                    data->logical_monitor_work_area.y,
-@@ -1230,6 +1264,8 @@ meta_motion_direction_to_string (MetaMotionDirection direction)
+@@ -1199,6 +1233,8 @@ meta_motion_direction_to_string (MetaMotionDirection direction)
        return "Up-Left";
      case META_MOTION_DOWN_LEFT:
        return "Down-Left";
@@ -1255,10 +1255,10 @@ index 92cd681..d00948d 100644
 +
  #endif /* META_WORKSPACE_MANAGER_H */
 diff --git a/src/meta/types.h b/src/meta/types.h
-index 403e62b..4e2f042 100644
+index 49fb568..d479c19 100644
 --- a/src/meta/types.h
 +++ b/src/meta/types.h
-@@ -43,6 +43,7 @@ typedef struct _MetaCursorTracker MetaCursorTracker;
+@@ -42,6 +42,7 @@ typedef struct _MetaCursorTracker MetaCursorTracker;
  typedef struct _MetaDnd         MetaDnd;
  typedef struct _MetaSettings    MetaSettings;
  
@@ -1267,10 +1267,10 @@ index 403e62b..4e2f042 100644
  typedef struct _MetaSelection   MetaSelection;
  
 diff --git a/src/meta/window.h b/src/meta/window.h
-index 2b69269..f4aebf0 100644
+index 3157d44..a5901ee 100644
 --- a/src/meta/window.h
 +++ b/src/meta/window.h
-@@ -450,4 +450,10 @@ uint64_t meta_window_get_id (MetaWindow *window);
+@@ -446,4 +446,10 @@ uint64_t meta_window_get_id (MetaWindow *window);
  META_EXPORT
  MetaWindowClientType meta_window_get_client_type (MetaWindow *window);
  

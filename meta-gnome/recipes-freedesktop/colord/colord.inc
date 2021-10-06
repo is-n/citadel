@@ -8,6 +8,5 @@ LIC_FILES_CHKSUM = " \
 
 PV = "1.4.5"
 SRC_URI = "https://www.freedesktop.org/software/colord/releases/${BPN}-${PV}.tar.xz"
-SRC_URI[md5sum] = "adc4501b54fb8667ee99f64cff87e12d"
 SRC_URI[sha256sum] = "b774ea443d239f4a2ee1853bd678426e669ddeda413dcb71cea1638c4d6c5e17"
 

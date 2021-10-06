@@ -1,14 +1,14 @@
-From a8011c5037a8807bb592b5d9e7e9f73be1e185e6 Mon Sep 17 00:00:00 2001
+From cb34a340e47a2c85830346aa3ebeb7e2c278c6c4 Mon Sep 17 00:00:00 2001
 From: Bruce Leidl <bruce@subgraph.com>
-Date: Tue, 5 Oct 2021 12:37:53 +0000
+Date: Tue, 5 Oct 2021 11:58:42 +0000
 Subject: [PATCH] Fix tests that cannot run
 
 ---
- meson.build | 28 ----------------------------
- 1 file changed, 28 deletions(-)
+ meson.build | 23 -----------------------
+ 1 file changed, 23 deletions(-)
 
 diff --git a/meson.build b/meson.build
-index 6ded66c..3753b9f 100644
+index 6ded66c..3bd6142 100644
 --- a/meson.build
 +++ b/meson.build
 @@ -234,27 +234,6 @@ release builds of SpiderMonkey. Try configuring SpiderMonkey with
@@ -39,17 +39,12 @@ index 6ded66c..3753b9f 100644
  have_printf_alternative_int = cc.compiles('''
  #include <stdio.h>
  int main(void) {
-@@ -656,13 +635,6 @@ if not get_option('skip_gtk_tests')
+@@ -656,8 +635,6 @@ if not get_option('skip_gtk_tests')
      have_gtk4 = dependency('gtk4', required: false).found()
  endif
  
 -subdir('installed-tests')
 -
--# Note: The test program in test/ needs to be ported
--#       to Windows before we can build it on Windows.
--if host_machine.system() != 'windows'
--    subdir('test')
--endif
- 
- valgrind_environment = environment()
- valgrind_environment.set('G_SLICE', 'always-malloc,debug-blocks')
+ # Note: The test program in test/ needs to be ported
+ #       to Windows before we can build it on Windows.
+ if host_machine.system() != 'windows'

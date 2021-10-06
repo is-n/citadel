@@ -1,22 +1,22 @@
-From 724ea2e98f186456ea984fe9250f8650ed025a9c Mon Sep 17 00:00:00 2001
-From: Bruce Leidl <bruce@subgraph.com>
-Date: Tue, 5 Oct 2021 11:17:47 +0000
-Subject: [PATCH] Disabled calendar events from user session
+From a2ea7fac46ea2b6599df0095223627b17181f390 Mon Sep 17 00:00:00 2001
+From: xSmurf <xsmurf@users.noreply.github.com>
+Date: Wed, 14 Nov 2018 01:47:43 -0500
+Subject: [PATCH] Disabled calendar events from user session...
 
 ---
  js/ui/sessionMode.js | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/js/ui/sessionMode.js b/js/ui/sessionMode.js
-index afcd67c..b686efb 100644
+index 2136e94..3f35ab2 100644
 --- a/js/ui/sessionMode.js
 +++ b/js/ui/sessionMode.js
-@@ -71,7 +71,7 @@ const _modes = {
+@@ -69,7 +69,7 @@ const _modes = {
  
      'user': {
          hasOverview: true,
 -        showCalendarEvents: true,
 +        showCalendarEvents: false,
-         showWelcomeDialog: true,
          allowSettings: true,
          allowExtensions: true,
+         allowScreencast: true,

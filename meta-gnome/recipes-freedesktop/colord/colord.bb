@@ -1,8 +1,9 @@
 require ${BPN}.inc
 
-inherit meson gobject-introspection gsettings gettext bash-completion systemd useradd
+inherit meson gobject-introspection gsettings gettext bash-completion systemd features_check useradd
 
 # polkit and gobject-introspection are mandatory and cannot be configured
+REQUIRED_DISTRO_FEATURES = "polkit gobject-introspection-data"
 UNKNOWN_CONFIGURE_WHITELIST_append = " introspection"
 
 DEPENDS += " \
@@ -35,7 +36,7 @@ FILES_${PN} += " \
     ${datadir}/glib-2.0 \
     ${datadir}/color \
     ${systemd_user_unitdir} \
-    ${libdir}/tmpfiles.d \
+    ${nonarch_libdir}/tmpfiles.d \
     ${libdir}/colord-plugins \
     ${libdir}/colord-sensors \
 "

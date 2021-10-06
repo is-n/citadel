@@ -5,7 +5,7 @@ HOMEPAGE = "http://www.gtk.org"
 BUGTRACKER = "https://bugzilla.gnome.org/"
 SECTION = "libs"
 
-DEPENDS = "glib-2.0 cairo pango atk jpeg libpng gdk-pixbuf libepoxy graphene libxi sassc-native \
+DEPENDS = "glib-2.0 cairo pango atk jpeg libpng gdk-pixbuf libepoxy graphene libxcursor libxinerama libxi sassc-native \
            gdk-pixbuf-native wayland wayland-protocols libxkbcommon virtual/egl virtual/libgles2 wayland-native"
 
 LICENSE = "LGPLv2 & LGPLv2+ & LGPLv2.1+"
@@ -37,6 +37,7 @@ do_configure_prepend() {
 
 EXTRA_OEMESON += " \
     -Ddemos=false \
+    -Dmedia-gstreamer=disabled \
 "
 
 do_compile_prepend() {
