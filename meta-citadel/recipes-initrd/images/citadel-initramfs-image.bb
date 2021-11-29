@@ -48,13 +48,11 @@ PACKAGE_INSTALL = "\
     kernel-module-hid-keytouch \
     kernel-module-hid-kye \
     kernel-module-hid-led \
-    kernel-module-hid-lenovo \
     kernel-module-hid-logitech \
     kernel-module-hid-logitech-dj \
     kernel-module-hid-logitech-hidpp \
     kernel-module-hid-microsoft \
     kernel-module-hid-monterey \
-    kernel-module-hid-multitouch \
     kernel-module-hid-ortek \
     kernel-module-hid-penmount \
     kernel-module-hid-plantronics \
