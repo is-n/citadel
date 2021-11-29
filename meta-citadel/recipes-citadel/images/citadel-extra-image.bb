@@ -4,6 +4,7 @@ LICENSE = "MIT"
 
 PACKAGE_INSTALL = "\
     linux-firmware \
+    sof-firmware \
     wireless-regdb-static \
     paper-icon-theme \
     gnome-backgrounds \
