@@ -1,4 +1,4 @@
-From 1b27f150bf7656cade484925da726daf9a52dd6b Mon Sep 17 00:00:00 2001
+From 3a4b623a1844634ad2276d2784e4f5ab20eb4767 Mon Sep 17 00:00:00 2001
 From: Bruce Leidl <bruce@subgraph.com>
 Date: Mon, 4 Oct 2021 13:10:48 +0000
 Subject: [PATCH] Citadel changes to Mutter
@@ -6,19 +6,19 @@ Subject: [PATCH] Citadel changes to Mutter
 ---
  src/compositor/compositor.c               |   9 +-
  src/core/meta-workspace-manager-private.h |  69 ++++
- src/core/meta-workspace-manager.c         | 465 +++++++++++++++++++++-
+ src/core/meta-workspace-manager.c         | 450 +++++++++++++++++++++-
  src/core/util-private.h                   |   2 +
  src/core/util.c                           |  48 +++
  src/core/window-private.h                 |   3 +
  src/core/window.c                         |  41 +-
  src/core/workspace-private.h              |   3 +
- src/core/workspace.c                      | 170 ++++----
+ src/core/workspace.c                      | 168 ++++----
  src/meta/common.h                         |   4 +-
- src/meta/meta-workspace-manager.h         |  44 ++
+ src/meta/meta-workspace-manager.h         |  44 +++
  src/meta/types.h                          |   1 +
  src/meta/window.h                         |   6 +
  src/meta/workspace.h                      |   6 +
- 14 files changed, 786 insertions(+), 85 deletions(-)
+ 14 files changed, 769 insertions(+), 85 deletions(-)
 
 diff --git a/src/compositor/compositor.c b/src/compositor/compositor.c
 index 9cdd39c..879950a 100644
@@ -135,19 +135,20 @@ index 261c4d4..4b5d4f4 100644
 +
  #endif /* META_WORKSPACE_MANAGER_PRIVATE_H */
 diff --git a/src/core/meta-workspace-manager.c b/src/core/meta-workspace-manager.c
-index 61fbc00..d7696a7 100644
+index 61fbc00..1ebb240 100644
 --- a/src/core/meta-workspace-manager.c
 +++ b/src/core/meta-workspace-manager.c
-@@ -44,6 +44,8 @@ enum
+@@ -44,6 +44,9 @@ enum
    WORKSPACES_REORDERED,
    ACTIVE_WORKSPACE_CHANGED,
    SHOWING_DESKTOP_CHANGED,
 +  CONTEXT_SWITCHED,
 +  CONTEXT_WINDOW_MOVED,
++  CONTEXT_REMOVED,
    LAST_SIGNAL
  };
  
-@@ -178,6 +180,21 @@ meta_workspace_manager_class_init (MetaWorkspaceManagerClass *klass)
+@@ -178,6 +181,29 @@ meta_workspace_manager_class_init (MetaWorkspaceManagerClass *klass)
                    0, NULL, NULL, NULL,
                    G_TYPE_NONE, 0);
  
@@ -166,10 +167,18 @@ index 61fbc00..d7696a7 100644
 +                   G_TYPE_NONE, 1,
 +                   META_TYPE_WINDOW);
 +
++  workspace_manager_signals[CONTEXT_REMOVED] =
++      g_signal_new("context-removed",
++                   G_TYPE_FROM_CLASS(klass),
++                   G_SIGNAL_RUN_LAST,
++                   0, NULL, NULL, NULL,
++                   G_TYPE_NONE, 1,
++                   G_TYPE_INT);
++
    g_object_class_install_property (object_class,
                                     PROP_LAYOUT_COLUMNS,
                                     g_param_spec_int ("layout-columns",
-@@ -201,6 +218,7 @@ meta_workspace_manager_class_init (MetaWorkspaceManagerClass *klass)
+@@ -201,6 +227,7 @@ meta_workspace_manager_class_init (MetaWorkspaceManagerClass *klass)
                                                       "Number of workspaces",
                                                       1, G_MAXINT, 1,
                                                       G_PARAM_READABLE));
@@ -177,7 +186,7 @@ index 61fbc00..d7696a7 100644
  }
  
  static void
-@@ -213,7 +231,7 @@ meta_workspace_manager_reload_work_areas (MetaWorkspaceManager *workspace_manage
+@@ -213,7 +240,7 @@ meta_workspace_manager_reload_work_areas (MetaWorkspaceManager *workspace_manage
  {
    GList *l;
  
@@ -186,7 +195,7 @@ index 61fbc00..d7696a7 100644
      {
        MetaWorkspace *workspace = l->data;
  
-@@ -230,12 +248,24 @@ meta_workspace_manager_new (MetaDisplay *display)
+@@ -230,12 +257,24 @@ meta_workspace_manager_new (MetaDisplay *display)
  
    workspace_manager->display = display;
    workspace_manager->active_workspace = NULL;
@@ -211,7 +220,7 @@ index 61fbc00..d7696a7 100644
    /* This is the default layout extracted from default
     * variable values in update_num_workspaces ()
     * This can be overridden using _NET_DESKTOP_LAYOUT in
-@@ -246,11 +276,6 @@ meta_workspace_manager_new (MetaDisplay *display)
+@@ -246,11 +285,6 @@ meta_workspace_manager_new (MetaDisplay *display)
                                                    1,
                                                    -1);
  
@@ -223,7 +232,7 @@ index 61fbc00..d7696a7 100644
    meta_workspace_manager_init_workspaces (workspace_manager);
  
    meta_prefs_add_listener (prefs_changed_callback, workspace_manager);
-@@ -301,6 +326,9 @@ MetaWorkspace *
+@@ -301,6 +335,9 @@ MetaWorkspace *
  meta_workspace_manager_get_workspace_by_index (MetaWorkspaceManager *workspace_manager,
                                                 int                   idx)
  {
@@ -233,7 +242,7 @@ index 61fbc00..d7696a7 100644
    return g_list_nth_data (workspace_manager->workspaces, idx);
  }
  
-@@ -1001,7 +1029,7 @@ meta_workspace_manager_unshow_desktop (MetaWorkspaceManager *workspace_manager)
+@@ -1001,7 +1038,7 @@ meta_workspace_manager_unshow_desktop (MetaWorkspaceManager *workspace_manager)
  GList *
  meta_workspace_manager_get_workspaces (MetaWorkspaceManager *workspace_manager)
  {
@@ -242,7 +251,7 @@ index 61fbc00..d7696a7 100644
  }
  
  int
-@@ -1015,6 +1043,17 @@ meta_workspace_manager_get_active_workspace_index (MetaWorkspaceManager *workspa
+@@ -1015,6 +1052,17 @@ meta_workspace_manager_get_active_workspace_index (MetaWorkspaceManager *workspa
    return meta_workspace_index (active);
  }
  
@@ -260,7 +269,7 @@ index 61fbc00..d7696a7 100644
  /**
   * meta_workspace_manager_get_active_workspace:
   * @workspace_manager: A #MetaWorkspaceManager
-@@ -1033,9 +1072,15 @@ meta_workspace_manager_workspace_switched (MetaWorkspaceManager *workspace_manag
+@@ -1033,9 +1081,15 @@ meta_workspace_manager_workspace_switched (MetaWorkspaceManager *workspace_manag
                                             int                   to,
                                             MetaMotionDirection   direction)
  {
@@ -279,7 +288,7 @@ index 61fbc00..d7696a7 100644
  }
  
  static void
-@@ -1058,3 +1103,403 @@ prefs_changed_callback (MetaPreference pref,
+@@ -1058,3 +1112,379 @@ prefs_changed_callback (MetaPreference pref,
                                                      timestamp, new_num);
      }
  }
@@ -464,7 +473,6 @@ index 61fbc00..d7696a7 100644
 +  }
 +
 +  if (anonymous_context) {
-+    g_message ("MetaWorkspaceManager: Assigning anonymous workspace context to namespace %s", namespace);
 +    anonymous_context->namespace = g_strdup (namespace);
 +    return anonymous_context;
 +  }
@@ -498,42 +506,24 @@ index 61fbc00..d7696a7 100644
 +    return;
 +  }
 +
++  for (GList *iter = context->workspaces; iter; iter = iter->next) {
++    MetaWorkspace *workspace = iter->data;
++    meta_workspace_relocate_windows (workspace, context->manager->active_workspace);
++  }
++  context->active_workspace = NULL;
++  g_list_free_full (g_steal_pointer(&context->workspaces), (GDestroyNotify) meta_workspace_remove);
++
++  g_signal_emit (context->manager, workspace_manager_signals[CONTEXT_REMOVED],
++                 0, context->id);
++
++  g_clear_pointer (&context->namespace, g_free);
 +  context->manager->context_list = g_list_remove (context->manager->context_list, context);
 +  g_object_unref (context);
 +}
 +
 +static void
-+meta_workspace_context_destroy (MetaWorkspaceContext *context)
-+{
-+  MetaWorkspaceManager *manager= context->manager;
-+
-+  g_return_if_fail (manager->active_context != context);
-+
-+  manager->context_list = g_list_remove(manager->context_list, context);
-+
-+  for (GList *iter = context->workspaces; iter; iter = iter->next) {
-+    MetaWorkspace *workspace = iter->data;
-+    meta_workspace_relocate_windows (workspace, manager->active_workspace);
-+  }
-+  context->active_workspace = NULL;
-+  g_free (context->namespace);
-+  g_list_free_full (context->workspaces, (GDestroyNotify) meta_workspace_remove);
-+  g_free(context);
-+}
-+
-+static void
-+meta_workspace_context_finalize (GObject *object)
-+{
-+  MetaWorkspaceContext *context = META_WORKSPACE_CONTEXT (object);
-+  meta_workspace_context_destroy(context);
-+  G_OBJECT_CLASS(meta_workspace_context_parent_class)->finalize(object);
-+}
-+
-+static void
 +meta_workspace_context_class_init (MetaWorkspaceContextClass *klass)
 +{
-+  GObjectClass *object_class = G_OBJECT_CLASS (klass);
-+  object_class->finalize = meta_workspace_context_finalize;
 +}
 +
 +static void
@@ -555,10 +545,7 @@ index 61fbc00..d7696a7 100644
 +  context->id = context_id;
 +
 +  if (namespace) {
-+    g_message ("MetaWorkspaceManager: Creating new workspace context for namespace %s (id: %d)", namespace, context_id);
 +    context->namespace = g_strdup (namespace);
-+  } else {
-+    g_message ("MetaWorkspaceManager: Creating new anonymous workspace context (id: %d)", context_id);
 +  }
 +
 +  manager->context_list = g_list_append (manager->context_list, context);
@@ -626,8 +613,6 @@ index 61fbc00..d7696a7 100644
 +
 +void
 +meta_workspace_context_make_active (MetaWorkspaceContext *context) {
-+
-+  g_message ("MetaWorkspaceManager: Activate workspace context (id: %d, ns: %s)", context->id, context->namespace);
 +
 +  MetaWorkspaceManager *manager = context->manager;
 +
@@ -879,7 +864,7 @@ index f0d896f..38c3b4c 100644
  void           meta_workspace_add_window    (MetaWorkspace *workspace,
                                               MetaWindow    *window);
 diff --git a/src/core/workspace.c b/src/core/workspace.c
-index 76ba87b..3ac18b8 100644
+index 76ba87b..3819c83 100644
 --- a/src/core/workspace.c
 +++ b/src/core/workspace.c
 @@ -237,7 +237,7 @@ meta_workspace_init (MetaWorkspace *workspace)
@@ -955,21 +940,19 @@ index 76ba87b..3ac18b8 100644
        meta_workspace_invalidate_work_area (workspace);
      }
  
-@@ -486,6 +495,13 @@ workspace_switch_sound(MetaWorkspace *from,
+@@ -486,6 +495,11 @@ workspace_switch_sound(MetaWorkspace *from,
    int i, nw, x, y, fi, ti;
    const char *e;
  
-+  g_message ("MetaWorkspace: workspace_switch_sound(from: %08x, to: %08x)", from->context_id, to->context_id);
 +  if (from->context_id != to->context_id) {
 +    /* XXX: There is no sound for context switches, but there should be (?) */
 +    return;
 +  }
-+  g_message ("MetaWorkspace: workspace_switch_sound(), calling meta_workspace_index() on from and to");
 +
    nw = meta_workspace_manager_get_n_workspaces (from->manager);
    fi = meta_workspace_index(from);
    ti = meta_workspace_index(to);
-@@ -566,9 +582,15 @@ meta_workspace_activate_with_focus (MetaWorkspace *workspace,
+@@ -566,9 +580,15 @@ meta_workspace_activate_with_focus (MetaWorkspace *workspace,
    MetaWorkspaceLayout layout1, layout2;
    gint num_workspaces, current_space, new_space;
    MetaMotionDirection direction;
@@ -987,7 +970,7 @@ index 76ba87b..3ac18b8 100644
  
    if (workspace->manager->active_workspace == workspace)
      {
-@@ -631,52 +653,59 @@ meta_workspace_activate_with_focus (MetaWorkspace *workspace,
+@@ -631,52 +651,59 @@ meta_workspace_activate_with_focus (MetaWorkspace *workspace,
     comp = meta_display_get_compositor (workspace->display);
     direction = 0;
  
@@ -1089,7 +1072,7 @@ index 76ba87b..3ac18b8 100644
  
     meta_compositor_switch_workspace (comp, old, workspace, direction);
  
-@@ -714,14 +743,19 @@ meta_workspace_activate (MetaWorkspace *workspace,
+@@ -714,14 +741,19 @@ meta_workspace_activate (MetaWorkspace *workspace,
  int
  meta_workspace_index (MetaWorkspace *workspace)
  {
@@ -1115,7 +1098,7 @@ index 76ba87b..3ac18b8 100644
  }
  
  void
-@@ -778,14 +812,14 @@ meta_workspace_invalidate_work_area (MetaWorkspace *workspace)
+@@ -778,14 +810,14 @@ meta_workspace_invalidate_work_area (MetaWorkspace *workspace)
    if (workspace->work_areas_invalid)
      {
        meta_topic (META_DEBUG_WORKAREA,
@@ -1134,7 +1117,7 @@ index 76ba87b..3ac18b8 100644
  
    /* If we are in the middle of a resize or move operation, we
     * might have cached pointers to the workspace's edges */
-@@ -956,8 +990,8 @@ ensure_work_areas_validated (MetaWorkspace *workspace)
+@@ -956,8 +988,8 @@ ensure_work_areas_validated (MetaWorkspace *workspace)
      }
    workspace->work_area_screen = work_area;
    meta_topic (META_DEBUG_WORKAREA,
@@ -1145,7 +1128,7 @@ index 76ba87b..3ac18b8 100644
                workspace->work_area_screen.x,
                workspace->work_area_screen.y,
                workspace->work_area_screen.width,
-@@ -987,8 +1021,8 @@ ensure_work_areas_validated (MetaWorkspace *workspace)
+@@ -987,8 +1019,8 @@ ensure_work_areas_validated (MetaWorkspace *workspace)
  
        meta_topic (META_DEBUG_WORKAREA,
                    "Computed work area for workspace %d "
@@ -1156,7 +1139,7 @@ index 76ba87b..3ac18b8 100644
                    logical_monitor->number,
                    data->logical_monitor_work_area.x,
                    data->logical_monitor_work_area.y,
-@@ -1230,6 +1264,8 @@ meta_motion_direction_to_string (MetaMotionDirection direction)
+@@ -1230,6 +1262,8 @@ meta_motion_direction_to_string (MetaMotionDirection direction)
        return "Up-Left";
      case META_MOTION_DOWN_LEFT:
        return "Down-Left";

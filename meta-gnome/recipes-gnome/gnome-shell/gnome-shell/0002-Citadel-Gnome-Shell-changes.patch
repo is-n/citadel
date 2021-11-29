@@ -1,4 +1,4 @@
-From 86c760b9e5e4358aab9a6bef4ffdedd7d7c2dd3f Mon Sep 17 00:00:00 2001
+From 681362d7640885a9cc9a97b50292e7810e4385a7 Mon Sep 17 00:00:00 2001
 From: Bruce Leidl <bruce@subgraph.com>
 Date: Tue, 5 Oct 2021 11:34:09 +0000
 Subject: [PATCH] Citadel Gnome Shell changes
@@ -7,34 +7,38 @@ Subject: [PATCH] Citadel Gnome Shell changes
  data/org.gnome.shell.gschema.xml.in           |   8 +
  data/theme/gnome-shell-sass/_widgets.scss     |   2 +
  .../gnome-shell-sass/widgets/_realms.scss     |  17 +
+ data/theme/gnome-shell.css                    |  67 ++-
  data/theme/meson.build                        |   1 +
  js/js-resources.gresource.xml                 |   7 +
  js/ui/main.js                                 |   4 +
  js/ui/overview.js                             |   2 +-
  js/ui/overviewControls.js                     |   3 +
  js/ui/realms/realmIndicator.js                |  37 ++
- js/ui/realms/realmManager.js                  |  54 +++
+ js/ui/realms/realmManager.js                  |  55 +++
  js/ui/realms/realmSearchProvider.js           | 326 +++++++++++++
  js/ui/realms/realmSwitcher.js                 | 325 +++++++++++++
- js/ui/realms/realmWindowFrame.js              | 371 +++++++++++++++
- js/ui/realms/realmWindowMenu.js               | 113 +++++
+ js/ui/realms/realmWindowFrame.js              | 308 ++++++++++++
+ js/ui/realms/realmWindowMenu.js               | 133 +++++
  js/ui/windowManager.js                        |  41 +-
- js/ui/windowMenu.js                           |  15 +-
+ js/ui/windowMenu.js                           |  20 +-
  js/ui/workspacesView.js                       |  12 +
- src/meson.build                               |   7 +
+ src/gnome-shell-plugin.c                      |  19 +
+ src/meson.build                               |   9 +
  src/shell-app-cache.c                         |   2 +-
  src/shell-app-system.c                        | 179 ++++++-
  src/shell-app-system.h                        |   6 +-
  src/shell-global.c                            |   3 +
- src/shell-realm-item.c                        | 392 ++++++++++++++++
+ src/shell-realm-item.c                        | 396 +++++++++++++++
  src/shell-realm-item.h                        |  35 ++
- src/shell-realm-tracker.c                     | 297 ++++++++++++
+ src/shell-realm-tracker.c                     | 310 ++++++++++++
  src/shell-realm-tracker.h                     |  14 +
  src/shell-realms-private.h                    |  21 +
- src/shell-realms.c                            | 442 ++++++++++++++++++
- src/shell-realms.h                            |  23 +
- src/shell-window-tracker.c                    |  43 +-
- 30 files changed, 2779 insertions(+), 23 deletions(-)
+ src/shell-realms-window-frames.c              | 386 +++++++++++++++
+ src/shell-realms-window-frames.h              |  17 +
+ src/shell-realms.c                            | 460 ++++++++++++++++++
+ src/shell-realms.h                            |  26 +
+ src/shell-window-tracker.c                    |  42 +-
+ 34 files changed, 3245 insertions(+), 48 deletions(-)
  create mode 100644 data/theme/gnome-shell-sass/widgets/_realms.scss
  create mode 100644 js/ui/realms/realmIndicator.js
  create mode 100644 js/ui/realms/realmManager.js
@@ -47,6 +51,8 @@ Subject: [PATCH] Citadel Gnome Shell changes
  create mode 100644 src/shell-realm-tracker.c
  create mode 100644 src/shell-realm-tracker.h
  create mode 100644 src/shell-realms-private.h
+ create mode 100644 src/shell-realms-window-frames.c
+ create mode 100644 src/shell-realms-window-frames.h
  create mode 100644 src/shell-realms.c
  create mode 100644 src/shell-realms.h
 
@@ -103,6 +109,207 @@ index 0000000..49a824c
 +  color: #8e8e80;
 +}
 \ No newline at end of file
+diff --git a/data/theme/gnome-shell.css b/data/theme/gnome-shell.css
+index 14caad8..6fc1142 100644
+--- a/data/theme/gnome-shell.css
++++ b/data/theme/gnome-shell.css
+@@ -28,7 +28,7 @@ stage {
+   font-weight: bold;
+   color: #eeeeec; }
+ 
+-.workspace-switcher-container, .switcher-list, .resize-popup, .osd-window {
++.osd-window, .resize-popup, .switcher-list, .workspace-switcher-container {
+   color: #eeeeec;
+   background-color: rgba(32, 32, 32, 0.96);
+   border-radius: 20px;
+@@ -38,8 +38,8 @@ stage {
+   color: #eeeeec;
+   background-color: rgba(238, 238, 236, 0.1); }
+ 
+-.app-well-app .overview-icon,
+-.grid-search-result .overview-icon, .show-apps .overview-icon, .list-search-result, .search-provider-icon {
++.search-provider-icon, .list-search-result, .show-apps .overview-icon, .app-well-app .overview-icon,
++.grid-search-result .overview-icon {
+   border-radius: 12px;
+   padding: 6px;
+   border: 2px solid transparent;
+@@ -51,7 +51,7 @@ stage {
+   background-color: #353535;
+   border: 1px solid #202020; }
+ 
+-.app-folder-dialog .folder-name-container .edit-folder-button, .button {
++.button, .app-folder-dialog .folder-name-container .edit-folder-button {
+   border-radius: 8px;
+   border-style: solid;
+   border-width: 1px;
+@@ -63,26 +63,26 @@ stage {
+   box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.2);
+   text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+   icon-shadow: 0 1px rgba(0, 0, 0, 0.2); }
+-  .app-folder-dialog .folder-name-container .edit-folder-button:focus, .button:focus {
++  .button:focus, .app-folder-dialog .folder-name-container .edit-folder-button:focus {
+     color: #eeeeec;
+     text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     icon-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     box-shadow: inset 0 0 0 2px rgba(27, 106, 203, 0.6); }
+-  .app-folder-dialog .folder-name-container .edit-folder-button:hover, .button:hover {
++  .button:hover, .app-folder-dialog .folder-name-container .edit-folder-button:hover {
+     color: #eeeeec;
+     background-color: #424242;
+     border-color: #2b2b2b;
+     box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.2);
+     text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     icon-shadow: 0 1px rgba(0, 0, 0, 0.2); }
+-  .app-folder-dialog .folder-name-container .edit-folder-button:insensitive, .button:insensitive {
++  .button:insensitive, .app-folder-dialog .folder-name-container .edit-folder-button:insensitive {
+     color: #919190;
+     border-color: #252526;
+     background-color: #323132;
+     box-shadow: none;
+     text-shadow: none;
+     icon-shadow: none; }
+-  .app-folder-dialog .folder-name-container .edit-folder-button:active, .button:active {
++  .button:active, .app-folder-dialog .folder-name-container .edit-folder-button:active {
+     color: #eeeeec;
+     background-color: #2d2d2d;
+     border-color: #191919;
+@@ -90,7 +90,7 @@ stage {
+     icon-shadow: none;
+     box-shadow: none; }
+ 
+-.modal-dialog .modal-dialog-linked-button, .hotplug-notification-item, .notification-banner .notification-button {
++.notification-banner .notification-button, .hotplug-notification-item, .modal-dialog .modal-dialog-linked-button {
+   color: #eeeeec;
+   background-color: #3c3c3c;
+   border-color: #2b2b2b;
+@@ -102,38 +102,38 @@ stage {
+   border-width: 1px;
+   border-left-width: 0;
+   border-bottom-width: 0; }
+-  .modal-dialog .modal-dialog-linked-button:insensitive, .hotplug-notification-item:insensitive, .notification-banner .notification-button:insensitive {
++  .notification-banner .notification-button:insensitive, .hotplug-notification-item:insensitive, .modal-dialog .modal-dialog-linked-button:insensitive {
+     color: #919190;
+     border-color: #252526;
+     background-color: #323132;
+     box-shadow: none;
+     text-shadow: none;
+     icon-shadow: none; }
+-  .modal-dialog .modal-dialog-linked-button:focus, .hotplug-notification-item:focus, .notification-banner .notification-button:focus {
++  .notification-banner .notification-button:focus, .hotplug-notification-item:focus, .modal-dialog .modal-dialog-linked-button:focus {
+     color: #eeeeec;
+     text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     icon-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     box-shadow: inset 0 0 0 2px rgba(27, 106, 203, 0.6); }
+-  .modal-dialog .modal-dialog-linked-button:hover, .hotplug-notification-item:hover, .notification-banner .notification-button:hover {
++  .notification-banner .notification-button:hover, .hotplug-notification-item:hover, .modal-dialog .modal-dialog-linked-button:hover {
+     color: #eeeeec;
+     background-color: #424242;
+     border-color: #2b2b2b;
+     box-shadow: none;
+     text-shadow: 0 1px rgba(0, 0, 0, 0.2);
+     icon-shadow: 0 1px rgba(0, 0, 0, 0.2); }
+-  .modal-dialog .modal-dialog-linked-button:active, .hotplug-notification-item:active, .notification-banner .notification-button:active {
++  .notification-banner .notification-button:active, .hotplug-notification-item:active, .modal-dialog .modal-dialog-linked-button:active {
+     color: #eeeeec;
+     background-color: #2d2d2d;
+     border-color: #191919;
+     text-shadow: none;
+     icon-shadow: none;
+     box-shadow: none; }
+-  .modal-dialog .modal-dialog-linked-button:first-child, .hotplug-notification-item:first-child, .notification-banner .notification-button:first-child {
++  .notification-banner .notification-button:first-child, .hotplug-notification-item:first-child, .modal-dialog .modal-dialog-linked-button:first-child {
+     border-radius: 0 0 0 14px; }
+-  .modal-dialog .modal-dialog-linked-button:last-child, .hotplug-notification-item:last-child, .notification-banner .notification-button:last-child {
++  .notification-banner .notification-button:last-child, .hotplug-notification-item:last-child, .modal-dialog .modal-dialog-linked-button:last-child {
+     border-right-width: 0;
+     border-radius: 0 0 14px 0; }
+-  .modal-dialog .modal-dialog-linked-button:first-child:last-child, .hotplug-notification-item:first-child:last-child, .notification-banner .notification-button:first-child:last-child {
++  .notification-banner .notification-button:first-child:last-child, .hotplug-notification-item:first-child:last-child, .modal-dialog .modal-dialog-linked-button:first-child:last-child {
+     border-radius: 0 0 14px 14px; }
+ 
+ /* WIDGETS */
+@@ -1237,9 +1237,9 @@ StScrollBar {
+       border-radius: 99px; }
+     #panel .panel-button:hover, #panel .panel-button:active, #panel .panel-button:overview, #panel .panel-button:focus, #panel .panel-button:checked {
+       box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.2); }
+-      #panel .panel-button.clock-display:hover, #panel .panel-button.clock-display:active, #panel .panel-button.clock-display:overview, #panel .panel-button.clock-display:focus, #panel .panel-button.clock-display:checked {
++      #panel .panel-button:hover.clock-display, #panel .panel-button:active.clock-display, #panel .panel-button:overview.clock-display, #panel .panel-button:focus.clock-display, #panel .panel-button:checked.clock-display {
+         box-shadow: none; }
+-        #panel .panel-button.clock-display:hover .clock, #panel .panel-button.clock-display:active .clock, #panel .panel-button.clock-display:overview .clock, #panel .panel-button.clock-display:focus .clock, #panel .panel-button.clock-display:checked .clock {
++        #panel .panel-button:hover.clock-display .clock, #panel .panel-button:active.clock-display .clock, #panel .panel-button:overview.clock-display .clock, #panel .panel-button:focus.clock-display .clock, #panel .panel-button:checked.clock-display .clock {
+           box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.2); }
+     #panel .panel-button .system-status-icon {
+       icon-size: 1.09em;
+@@ -1250,13 +1250,13 @@ StScrollBar {
+       margin: 0; }
+     #panel .panel-button .app-menu-icon {
+       -st-icon-style: symbolic; }
+-    #panel #panelActivities.panel-button {
++    #panel .panel-button#panelActivities {
+       -natural-hpadding: 18px; }
+   #panel.unlock-screen .panel-button:hover, #panel.unlock-screen .panel-button:active, #panel.unlock-screen .panel-button:overview, #panel.unlock-screen .panel-button:focus, #panel.unlock-screen .panel-button:checked, #panel.login-screen .panel-button:hover, #panel.login-screen .panel-button:active, #panel.login-screen .panel-button:overview, #panel.login-screen .panel-button:focus, #panel.login-screen .panel-button:checked, #panel:overview .panel-button:hover, #panel:overview .panel-button:active, #panel:overview .panel-button:overview, #panel:overview .panel-button:focus, #panel:overview .panel-button:checked {
+     box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.15); }
+-    #panel.unlock-screen .panel-button.clock-display:hover, #panel.unlock-screen .panel-button.clock-display:active, #panel.unlock-screen .panel-button.clock-display:overview, #panel.unlock-screen .panel-button.clock-display:focus, #panel.unlock-screen .panel-button.clock-display:checked, #panel.login-screen .panel-button.clock-display:hover, #panel.login-screen .panel-button.clock-display:active, #panel.login-screen .panel-button.clock-display:overview, #panel.login-screen .panel-button.clock-display:focus, #panel.login-screen .panel-button.clock-display:checked, #panel:overview .panel-button.clock-display:hover, #panel:overview .panel-button.clock-display:active, #panel:overview .panel-button.clock-display:overview, #panel:overview .panel-button.clock-display:focus, #panel:overview .panel-button.clock-display:checked {
++    #panel.unlock-screen .panel-button:hover.clock-display, #panel.unlock-screen .panel-button:active.clock-display, #panel.unlock-screen .panel-button:overview.clock-display, #panel.unlock-screen .panel-button:focus.clock-display, #panel.unlock-screen .panel-button:checked.clock-display, #panel.login-screen .panel-button:hover.clock-display, #panel.login-screen .panel-button:active.clock-display, #panel.login-screen .panel-button:overview.clock-display, #panel.login-screen .panel-button:focus.clock-display, #panel.login-screen .panel-button:checked.clock-display, #panel:overview .panel-button:hover.clock-display, #panel:overview .panel-button:active.clock-display, #panel:overview .panel-button:overview.clock-display, #panel:overview .panel-button:focus.clock-display, #panel:overview .panel-button:checked.clock-display {
+       box-shadow: none; }
+-      #panel.unlock-screen .panel-button.clock-display:hover .clock, #panel.unlock-screen .panel-button.clock-display:active .clock, #panel.unlock-screen .panel-button.clock-display:overview .clock, #panel.unlock-screen .panel-button.clock-display:focus .clock, #panel.unlock-screen .panel-button.clock-display:checked .clock, #panel.login-screen .panel-button.clock-display:hover .clock, #panel.login-screen .panel-button.clock-display:active .clock, #panel.login-screen .panel-button.clock-display:overview .clock, #panel.login-screen .panel-button.clock-display:focus .clock, #panel.login-screen .panel-button.clock-display:checked .clock, #panel:overview .panel-button.clock-display:hover .clock, #panel:overview .panel-button.clock-display:active .clock, #panel:overview .panel-button.clock-display:overview .clock, #panel:overview .panel-button.clock-display:focus .clock, #panel:overview .panel-button.clock-display:checked .clock {
++      #panel.unlock-screen .panel-button:hover.clock-display .clock, #panel.unlock-screen .panel-button:active.clock-display .clock, #panel.unlock-screen .panel-button:overview.clock-display .clock, #panel.unlock-screen .panel-button:focus.clock-display .clock, #panel.unlock-screen .panel-button:checked.clock-display .clock, #panel.login-screen .panel-button:hover.clock-display .clock, #panel.login-screen .panel-button:active.clock-display .clock, #panel.login-screen .panel-button:overview.clock-display .clock, #panel.login-screen .panel-button:focus.clock-display .clock, #panel.login-screen .panel-button:checked.clock-display .clock, #panel:overview .panel-button:hover.clock-display .clock, #panel:overview .panel-button:active.clock-display .clock, #panel:overview .panel-button:overview.clock-display .clock, #panel:overview .panel-button:focus.clock-display .clock, #panel:overview .panel-button:checked.clock-display .clock {
+         box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.15); }
+   #panel .panel-status-indicators-box,
+   #panel .panel-status-menu-box {
+@@ -1375,11 +1375,11 @@ StScrollBar {
+   padding: 18px;
+   spacing: 8px; }
+ 
+-.list-search-result:focus, .search-provider-icon:focus, .list-search-result:hover, .search-provider-icon:hover, .list-search-result:selected, .search-provider-icon:selected {
++.search-provider-icon:focus, .list-search-result:focus, .search-provider-icon:hover, .list-search-result:hover, .search-provider-icon:selected, .list-search-result:selected {
+   background-color: rgba(238, 238, 236, 0.1);
+   transition-duration: 200ms; }
+ 
+-.list-search-result:active, .search-provider-icon:active, .list-search-result:checked, .search-provider-icon:checked {
++.search-provider-icon:active, .list-search-result:active, .search-provider-icon:checked, .list-search-result:checked {
+   background-color: rgba(7, 7, 7, 0.86); }
+ 
+ .grid-search-results {
+@@ -1516,7 +1516,8 @@ StScrollBar {
+     padding: 24px 36px 0;
+     spacing: 12px;
+     /* FIXME: this is to keep the label in sync with the entry */ }
+-    .app-folder-dialog .folder-name-container .folder-name-label, .app-folder-dialog .folder-name-container .folder-name-entry {
++    .app-folder-dialog .folder-name-container .folder-name-label,
++    .app-folder-dialog .folder-name-container .folder-name-entry {
+       font-size: 18pt;
+       font-weight: 800; }
+     .app-folder-dialog .folder-name-container .folder-name-entry {
+@@ -2068,7 +2069,8 @@ StScrollBar {
+ 
+ .login-dialog-not-listed-label {
+   padding-left: 2px; }
+-  .login-dialog-not-listed-button:focus .login-dialog-not-listed-label, .login-dialog-not-listed-button:hover .login-dialog-not-listed-label {
++  .login-dialog-not-listed-button:focus .login-dialog-not-listed-label,
++  .login-dialog-not-listed-button:hover .login-dialog-not-listed-label {
+     color: #eeeeec; }
+ 
+ .login-dialog-not-listed-label {
+@@ -2206,3 +2208,18 @@ StScrollBar {
+     background-color: rgba(53, 53, 53, 0.5); }
+   #unlockDialogNotifications StButton#vhandle:active, #unlockDialogNotifications StButton#hhandle:active {
+     background-color: rgba(27, 106, 203, 0.5); }
++
++.realm-switch-label {
++  font-size: 36px;
++  font-weight: bold;
++  color: #ffffff;
++  background-color: rgba(10, 10, 10, 0.7);
++  border-radius: 5px;
++  padding: .5em; }
++
++.realm-frame-label {
++  font-size: 12pt;
++  font-weight: bold; }
++
++.realm-config-icon {
++  color: #8e8e80; }
 diff --git a/data/theme/meson.build b/data/theme/meson.build
 index 87112c3..9cec069 100644
 --- a/data/theme/meson.build
@@ -240,10 +447,10 @@ index 0000000..d71e346
 +    });
 diff --git a/js/ui/realms/realmManager.js b/js/ui/realms/realmManager.js
 new file mode 100644
-index 0000000..0432190
+index 0000000..30e27a4
 --- /dev/null
 +++ b/js/ui/realms/realmManager.js
-@@ -0,0 +1,54 @@
+@@ -0,0 +1,55 @@
 +const { Clutter, Gio, Meta, Shell, St } = imports.gi;
 +
 +const Main = imports.ui.main;
@@ -274,6 +481,7 @@ index 0000000..0432190
 +        const realms = Shell.Realms.get_default();
 +        realms.connect('realm-context-switched', () => {
 +            Main.overview.dash._queueRedisplay();
++            this._realmIndicator.update();
 +        });
 +
 +        this._switchAnimation = new RealmSwitcher.ContextSwitchAnimationController(this._realmIndicator);
@@ -963,68 +1171,23 @@ index 0000000..507df00
 +}
 diff --git a/js/ui/realms/realmWindowFrame.js b/js/ui/realms/realmWindowFrame.js
 new file mode 100644
-index 0000000..0a36179
+index 0000000..abd4902
 --- /dev/null
 +++ b/js/ui/realms/realmWindowFrame.js
-@@ -0,0 +1,371 @@
+@@ -0,0 +1,308 @@
 +const { Clutter, Cogl, GObject, Meta, Shell, St } = imports.gi;
-+
-+const Main = imports.ui.main;
-+
-+var pastelColors = {};
-+
-+function pastelColorsFromName(name) {
-+    var hash = 0;
-+
-+    if (name in pastelColors) {
-+        return pastelColors[name];
-+    }
-+    if (name === undefined || name === null || name === "") {
-+        hash = Math.random() * 0xffffff;
-+    } else {
-+        for (let i = 0, ii = name.length; i < ii; i++) {
-+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
-+        }
-+    }
-+
-+    let baseline = 127;
-+    let multiplier = 64 + ((hash>>24)&0xff);
-+    let ok = false;
-+    let i = 0;
-+    while (!ok && i++ < 10) {
-+        var r = ( Math.round( (hash&0xff) * multiplier ) + baseline ) & 0xff;
-+        var g = ( Math.round( ((hash>>8)&0xff) * multiplier ) + baseline ) & 0xff;
-+        var b = ( Math.round( ((hash>>16)&0xff) * multiplier ) + baseline ) & 0xff;
-+        multiplier += 10;
-+        let d = Math.sqrt( Math.pow((r-0xff), 2) + Math.pow(g, 2) + Math.pow(b, 2) );
-+        let p = Math.round( ( d / Math.sqrt( Math.pow(255, 2) * 3 ) ) * 100 );
-+        if (p <= 35) {
-+            continue;
-+        }
-+        ok = true;
-+    }
-+
-+    pastelColors[name] = [r,g,b];
-+    return pastelColors[name];
-+}
-+
-+let IgnoredWindowTypes = [
-+    Meta.WindowType.TOOLTIP
-+    , Meta.WindowType.MENU
-+    , Meta.WindowType.DROPDOWN_MENU
-+    , Meta.WindowType.POPUP_MENU
-+];
 +
 +var WindowFrameManager = class WindowFrameManager {
 +    constructor() {
-+        this._windowMapId =
-+            global.window_manager.connect('map', this._handleWindowMap.bind(this));
-+        this._contextWindowMovedId =
-+            global.workspace_manager.connect('context-window-moved', this._onContextWindowMoved.bind(this));
-+
 +        this._realms = Shell.Realms.get_default();
-+        this._labelOnTop = true;
-+        this._workspaces = [];
++        let frames = this._realms.window_frames();
++        this._frame_effects = [];
++
++        global.window_manager.connect('map', this._handleWindowMap.bind(this));
++        global.workspace_manager.connect('context-window-moved', this._onContextWindowMoved.bind(this));
++        global.workspace_manager.connect('context-removed', this._onContextRemoved.bind(this));
++        frames.connect('realm-frame-colors-changed', this._onFrameColorsChanged.bind(this));
++
 +        this.trackWindows();
 +    }
 +
@@ -1041,27 +1204,12 @@ index 0000000..0a36179
 +        return Clutter.EVENT_PROPAGATE;
 +    }
 +
-+    windowRealmName(win) {
-+        if (this._realms.is_citadel_window(win)) {
-+            return "Citadel";
-+        } else {
-+            let realm = this._realms.realm_by_window(win);
-+            if (realm) {
-+                return realm.realm_name;
-+            }
-+        }
-+        return "";
++    _onContextRemoved(workspaceManager, id) {
++        this.trackWindows();
 +    }
 +
-+    handleWindow(actor) {
-+        let win = actor.metaWindow;
-+
-+        if (win.is_on_foreign_workspace_context()) {
-+            let realm_name = this.windowRealmName(win);
-+            this._applyBorder(actor, win, realm_name);
-+        } else {
-+            this._removeBorder(actor);
-+        }
++    _onFrameColorsChanged(realms) {
++        this.trackWindows();
 +    }
 +
 +    trackWindows() {
@@ -1069,281 +1217,278 @@ index 0000000..0a36179
 +        actors.forEach(a => this.handleWindow(a));
 +    }
 +
-+    _removeLabel(actor) {
-+        var children = actor.get_children();
-+        for (const child of children) {
-+            if (child.get_name() == 'realm-label') {
-+                actor.remove_child(child);
++    handleWindow(actor) {
++        let win = actor.metaWindow;
++        let win_id = win.get_stable_sequence();
++        let effect = this._frame_effects[win_id];
++
++        let frames = this._realms.window_frames();
++
++        if (frames.has_frame(win) && frames.is_frame_enabled(win)) {
++            let color = frames.color_for_window(win);
++
++            if (effect) {
++                effect.setColor(color);
++            } else {
++                let label = frames.label_for_window(win);
++                effect = new RealmFrameEffect(actor, color, label);
++                this._frame_effects[win_id] = effect;
 +            }
++        } else if (effect) {
++            effect.removeEffect(actor);
++            this._frame_effects[win_id] = null;
 +        }
 +    }
-+
-+    _removeBorder(actor) {
-+        actor.remove_effect_by_name('foreign');
-+        this._removeLabel(actor);
-+    }
-+
-+    _applyLabel(actor, win, realm_name, r, g, b) {
-+        let _lot = this._labelOnTop;
-+        //let geom = actor.get_allocation_geometry();
-+        let box = actor.get_allocation_box();
-+        if ((box.y <= 30) || // Top bar XXX: Calculate/obtain from somewhere
-+            win.is_fullscreen() === true || // Fullscreen
-+            [Meta.MaximizeFlags.BOTH, Meta.MaximizeFlags.VERTICAL].includes(win.get_maximized())) { // Maximized
-+            _lot = false;
-+        }
-+        this._removeLabel(actor);
-+
-+        let label = new St.Label({
-+            style_class: 'realm-frame-label',
-+            z_position: 1.0,
-+        })
-+        let clutter_text = label.get_clutter_text();
-+        let alpha = 64;
-+        if (_lot === true) {
-+            alpha *= 2;
-+        }
-+        let color_text = new Clutter.Color({
-+            red: 0,
-+            green: 0,
-+            blue: 0,
-+            alpha: alpha * 1.5
-+        });
-+        let color_background = new Clutter.Color({
-+            red: r,
-+            green: g,
-+            blue: b,
-+            alpha: alpha
-+        });
-+        clutter_text.set_color(color_text);
-+        clutter_text.set_background_color(color_background);
-+        clutter_text.set_name('realm-label');
-+        label.set_text('  '+realm_name+'  ');
-+
-+        let orect = win.get_frame_rect();
-+        let irect = win.get_buffer_rect();
-+        let borderX = orect.x - irect.x;
-+        let borderY = orect.y - irect.y;
-+        let margins = {
-+            top: borderY + 1
-+            , left: borderX + 2
-+        };
-+        margins.top -= 3;
-+        margins.left -= 3;
-+
-+        if (_lot === true) {
-+            margins.top -= label.get_height();
-+            margins.left -= 2;
-+        }
-+        if (win.is_fullscreen() === true || win.get_maximized() === Meta.MaximizeFlags.BOTH) {
-+            margins.top = 0;
-+            margins.left = 0;
-+        }
-+        label.x = margins.left;
-+        label.y = margins.top;
-+        actor.add_child(label);
-+    }
-+
-+    _applyBorder(actor, win, realm_name) {
-+        if (IgnoredWindowTypes.includes(win.get_window_type())) {
-+            return;
-+        }
-+        let e = new RealmFrameEffect();
-+        e.setRGB(realm_name, win);
-+
-+        if (win.get_window_type() === Meta.WindowType.NORMAL) {
-+            this._applyLabel(actor, win, realm_name, e.r, e.g, e.b);
-+        }
-+
-+        if (!actor.get_effect('foreign')) {
-+            actor.add_effect_with_name('foreign', e);
-+        }
-+    }
-+
 +}
 +
 +var RealmFrameEffect = GObject.registerClass(
-+    class RealmFrameEffect extends Clutter.Effect {
-+        _init() {
-+            super._init();
-+            this._pipeline = null;
-+        }
-+        setRGB(name, win) {
-+            this._win = win;
-+            var r = 0, g = 0, b = 0;
-+            if (name == 'Citadel') {
-+                r = 0xff;
-+            } else {
-+                [r,g,b] = pastelColorsFromName(name);
-+            }
-+            this.r = r;
-+            this.g = g;
-+            this.b = b;
++class RealmFrameEffect extends Clutter.Effect {
++    _init(actor, color, label_text) {
++        super._init();
++        this._frame_width = 2;
++        this._pipeline = null;
++        this._color = color;
++        this._label_on_top = true;
++        this._label = null;
++
++        if (label_text) {
++            this._label = this._createLabel(actor, label_text);
++            this._updateLabel(actor.metaWindow);
 +        }
 +
-+        adjust_actor_box(box, win) {
-+            let frame_rect = win.get_frame_rect();
-+            let buffer_rect = win.get_buffer_rect();
-+            let borderX = frame_rect.x - buffer_rect.x;
-+            let borderY = frame_rect.y - buffer_rect.y;
++        this._sizeChangedId = actor.metaWindow.connect('size-changed', window => {
++            this._updateLabel(window);
++        });
 +
-+            let margins = {
-+                top: borderY - 3,
-+                bottom: borderY - 1,
-+                left: borderX - 3,
-+                right: borderX - 3,
-+            };
++        actor.add_effect(this);
++    }
 +
-+            let wayland = win.get_client_type() == Meta.WindowClientType.WAYLAND;
++    removeEffect(actor) {
++        if (this._label) {
++            actor.remove_child(this._label);
++            this._label = null;
++        }
++        if (this._sizeChangedId) {
++            let win = actor.metaWindow;
++            win.disconnect(this._sizeChangedId);
++            this._sizeChangedId = 0;
++        }
++        actor.remove_effect(this);
++    }
 +
-+            if (wayland) {
-+                margins.bottom += 4;
-+            }
++    _createLabel(actor, label_text) {
++        let label = new St.Label({
++            style_class: 'realm-frame-label',
++            z_position: 1.0,
 +
-+            let width = 2;
++        });
++        label.set_text('  '+label_text+'  ');
++        actor.add_child(label);
++        return label;
++    }
 +
-+            switch (win.get_maximized()) {
-+                case Meta.MaximizeFlags.BOTH:
-+                    margins.top += width;
-+                    margins.right += width;
-+                    margins.bottom += width - (wayland ? 5 : 0);
-+                    margins.left += width;
-+                    break;
-+                case Meta.MaximizeFlags.HORIZONTAL:
-+                    margins.right += width;
-+                    margins.left += width;
-+                    break;
-+                case Meta.MaximizeFlags.VERTICAL:
-+                    margins.top += width;
-+                    margins.bottom += width;
-+                    break;
-+            }
++    _updateLabel(window) {
++        if (this._label) {
++            this._updateLabelPosition(window);
++            this._updateLabelColor();
++        }
++    }
 +
-+            if (win.is_fullscreen()) {
-+                margins.top += 3;
-+                margins.right += 2;
-+                margins.bottom -= (wayland ? 3 : 0);
-+                margins.left += 3;
-+            }
++    _updateLabelPosition(window) {
 +
-+            if (!wayland && !win.decorated && !win.is_fullscreen() && (win.get_maximized() !== Meta.MaximizeFlags.BOTH)) {
-+                margins.bottom += 4;
-+            }
-+
++        if (!this._label_height) {
++            // If we scale the text, the reported size of the label will not be the value we need so
++            // save the initial value.
++            this._label_height = this._label.get_height();
 +        }
 +
-+        draw_rect(node, x, y, width, height) {
-+            const box = new Clutter.ActorBox();
-+            box.set_origin(x, y);
-+            box.set_size(width, height);
-+            node.add_rectangle(box);
++
++        let maximized = window.is_fullscreen() === true || // Fullscreen
++            [Meta.MaximizeFlags.BOTH, Meta.MaximizeFlags.VERTICAL].includes(window.get_maximized());  // Maximized
++
++        this._label_on_top = !maximized;
++
++        let frame_rect = window.get_frame_rect();
++        let buffer_rect = window.get_buffer_rect();
++
++        let offsetX = frame_rect.x - buffer_rect.x;
++        let offsetY = frame_rect.y - buffer_rect.y;
++
++
++        if (window.get_client_type() === Meta.WindowClientType.WAYLAND) {
++            let scaleFactor = St.ThemeContext.get_for_stage(global.stage).scale_factor;
++            if (scaleFactor !== 1) {
++                offsetX = offsetX / scaleFactor;
++                this._label.set_style(`font-size: ${12 / scaleFactor}pt;`);
++            }
++            offsetX -= 1;
++            offsetY -= 4;
 +        }
 +
-+        draw_hline(node, x, y, size, line_width = 2) {
-+            this.draw_rect(node, x, y, size, line_width);
++        // If label is on top and there is enough space above title bar move position up by label height
++        if (this._label_on_top && this._label_height <= offsetY) {
++            offsetY -= this._label_height;
++        } else if (maximized) {
++            offsetX = 0;
++            offsetY = 0;
++        }
++        this._label.set_position(offsetX, offsetY);
++    }
++
++    _updateLabelColor() {
++        let fg = new Clutter.Color({
++            red: 0,
++            green: 0,
++            blue: 0,
++            alpha: 96,
++        });
++
++        let bg = this._color.copy();
++
++        if (this._label_on_top) {
++            bg.alpha = 100;
++        } else {
++            bg.alpha = 200;
 +        }
 +
-+        draw_vline(node, x, y, size, line_width = 2) {
-+            this.draw_rect(node, x, y, line_width, size);
++        let clutter_text = this._label.get_clutter_text();
++        clutter_text.set_color(fg);
++        clutter_text.set_background_color(bg);
++    }
++
++
++    setColor(color) {
++        if (this._color && this._color.equal(color)) {
++            return;
++        }
++        this._color = color;
++        this.setPipelineColor();
++        if (this._label) {
++            this._updateLabelColor();
++        }
++    }
++
++    setPipelineColor() {
++        if (!this._color || !this._pipeline) {
++            return;
++        }
++        let s = this._color.to_string();
++
++        let cogl_color = new Cogl.Color();
++        cogl_color.init_from_4ub(this._color.red, this._color.green, this._color.blue, 0xc4);
++        this._pipeline.set_color(cogl_color);
++    }
++
++    _calculate_frame_box(window, allocation) {
++        let frame_rect = window.get_frame_rect();
++        let buffer_rect = window.get_buffer_rect();
++
++        let offsetX = frame_rect.x - buffer_rect.x;
++        let offsetY = frame_rect.y - buffer_rect.y;
++
++        let top = offsetY - 3;
++        let bottom = offsetY - 1;
++        let left = offsetX - 3;
++        let right = offsetX - 1;
++
++        let wayland = window.get_client_type() == Meta.WindowClientType.WAYLAND;
++
++        if (wayland) {
++            bottom += 4;
 +        }
 +
-+        vfunc_paint_node(node, ctx) {
-+            let actor = this.get_actor();
++        let fw = this._frame_width;
 +
-+            const actorNode = new Clutter.ActorNode(actor, -1);
-+            node.add_child(actorNode);
 +
-+            if (!this._pipeline) {
-+                let framebuffer = ctx.get_framebuffer();
-+                let coglContext = framebuffer.get_context();
-+                let color = new Cogl.Color();
-+                color.init_from_4ub(this.r, this.g, this.b, 0xc4);
-+                this._pipeline = new Cogl.Pipeline(coglContext);
-+                this._pipeline.set_color(color);
-+            }
-+
-+            let win = actor.get_meta_window();
-+            let frame_rect = win.get_frame_rect();
-+            let buffer_rect = win.get_buffer_rect();
-+            let borderX = frame_rect.x - buffer_rect.x;
-+            let borderY = frame_rect.y - buffer_rect.y;
-+
-+            let margins = {
-+                top: borderY - 3,
-+                bottom: borderY - 1,
-+                left: borderX - 3,
-+                right: borderX - 3,
-+            };
-+
-+            let wayland = win.get_client_type() == Meta.WindowClientType.WAYLAND;
-+
-+            if (wayland) {
-+                margins.bottom += 4;
-+            }
-+
-+            let width = 2;
-+
-+            switch (win.get_maximized()) {
-+                case Meta.MaximizeFlags.BOTH:
-+                    margins.top += width;
-+                    margins.right += width;
-+                    margins.bottom += width - (wayland ? 5 : 0);
-+                    margins.left += width;
-+                    break;
-+                case Meta.MaximizeFlags.HORIZONTAL:
-+                    margins.right += width;
-+                    margins.left += width;
-+                    break;
-+                case Meta.MaximizeFlags.VERTICAL:
-+                    margins.top += width;
-+                    margins.bottom += width;
-+                    break;
-+            }
-+
-+            if (win.is_fullscreen()) {
-+                margins.top += 3;
-+                margins.right += 2;
-+                margins.bottom -= (wayland ? 3 : 0);
-+                margins.left += 3;
-+            }
-+
-+            if (!wayland && !win.decorated && !win.is_fullscreen() && (win.get_maximized() !== Meta.MaximizeFlags.BOTH)) {
-+                margins.bottom += 4;
-+            }
-+
-+            const pipelineNode = new Clutter.PipelineNode(this._pipeline);
-+            pipelineNode.set_name('Realm Frame');
-+            node.add_child(pipelineNode);
-+
-+            const render_box = new Clutter.ActorBox();
-+
-+            let alloc = actor.get_allocation_box();
-+
-+            let w = alloc.get_width() - (margins.right + margins.left);
-+            let h = alloc.get_height() - (margins.bottom + margins.top + width);
-+
-+            // Clockwise starting at top
-+
-+            // Top
-+
-+            this.draw_hline(pipelineNode, margins.left, margins.top + width, w, width * 2);
-+
-+            // Right
-+            this.draw_vline(pipelineNode, alloc.get_width() - width - margins.right, width + margins.top, h);
-+
-+            // Bottom
-+            this.draw_hline(pipelineNode, margins.left, alloc.get_height() - width - margins.bottom, w);
-+
-+            // Left
-+            this.draw_vline(pipelineNode, margins.left, margins.top + width, h);
++        switch (window.get_maximized()) {
++            case Meta.MaximizeFlags.BOTH:
++                top += fw;
++                right += fw;
++                bottom += fw - (wayland ? 5 : 0);
++                left += fw;
++                break;
++            case Meta.MaximizeFlags.HORIZONTAL:
++                right += fw;
++                left += fw;
++                break;
++            case Meta.MaximizeFlags.VERTICAL:
++                top += fw;
++                bottom += fw;
++                break;
 +        }
-+    });
++
++        if (window.is_fullscreen()) {
++            top += 3;
++            right += 2;
++            bottom -= (wayland ? 3 : 0);
++            left += 3;
++        }
++
++        if (!wayland && !window.decorated && !window.is_fullscreen() && (window.get_maximized() !== Meta.MaximizeFlags.BOTH)) {
++            bottom += 4;
++        }
++
++        let x = left;
++        let y = top + fw;
++        let w = allocation.get_width() - (right + left);
++        let h = allocation.get_height() - (bottom + top + fw);
++
++        return [x, y, w, h];
++    }
++
++    draw_rect(node, x, y, width, height) {
++        const box = new Clutter.ActorBox();
++        box.set_origin(x, y);
++        box.set_size(width, height);
++        node.add_rectangle(box);
++    }
++
++    draw_hline(node, x, y, width, width_factor = 1) {
++        this.draw_rect(node, x, y, width, this._frame_width * width_factor);
++    }
++
++    draw_vline(node, x, y, height, width_factor = 1) {
++        this.draw_rect(node, x, y, this._frame_width * width_factor, height);
++    }
++
++    vfunc_paint_node(node, ctx) {
++        let actor = this.get_actor();
++
++        const actorNode = new Clutter.ActorNode(actor, -1);
++        node.add_child(actorNode);
++
++        if (!this._pipeline) {
++            let framebuffer = ctx.get_framebuffer();
++            let coglContext = framebuffer.get_context();
++            this._pipeline = new Cogl.Pipeline(coglContext);
++            this.setPipelineColor();
++        }
++
++        const pipelineNode = new Clutter.PipelineNode(this._pipeline);
++        pipelineNode.set_name('Realm Frame');
++        node.add_child(pipelineNode);
++
++        let [x, y, width, height] = this._calculate_frame_box(actor.metaWindow, actor.get_allocation_box());
++
++        // Top
++        this.draw_hline(pipelineNode, x, y, width, 2);
++
++        // Right
++        this.draw_vline(pipelineNode, x + width, y, height);
++
++        // Bottom
++        this.draw_hline(pipelineNode, x, y + height, width);
++
++        // Left
++        this.draw_vline(pipelineNode, x, y, height);
++    }
++});
 diff --git a/js/ui/realms/realmWindowMenu.js b/js/ui/realms/realmWindowMenu.js
 new file mode 100644
-index 0000000..1aef4d0
+index 0000000..6418724
 --- /dev/null
 +++ b/js/ui/realms/realmWindowMenu.js
-@@ -0,0 +1,113 @@
+@@ -0,0 +1,133 @@
 +
 +const { Shell, GObject } = imports.gi;
 +
@@ -1422,6 +1567,26 @@ index 0000000..1aef4d0
 +    } else {
 +        return null;
 +    }
++}
++function enableFrameItem(window) {
++    const realms = Shell.Realms.get_default();
++    const frames = realms.window_frames();
++    if (!frames.has_frame(window)) {
++        return null;
++    }
++    let enabled = frames.is_frame_enabled(window);
++    let item = new PopupMenu.PopupMenuItem("Display colored window frame");
++    if (enabled) {
++        item.setOrnament(PopupMenu.Ornament.CHECK);
++    }
++
++    item.connect('activate', () => {
++        let realms = Shell.Realms.get_default();
++        const frames = realms.window_frames();
++        frames.set_frame_enabled(window, !enabled);
++    });
++
++    return item;
 +}
 +
 +function realmWindowMenu(window) {
@@ -1539,7 +1704,7 @@ index caaecec..a8ff7f9 100644
              this._shellwm.completed_switch_workspace();
              this._switchInProgress = false;
 diff --git a/js/ui/windowMenu.js b/js/ui/windowMenu.js
-index 27cecda..b238b86 100644
+index 27cecda..60dda02 100644
 --- a/js/ui/windowMenu.js
 +++ b/js/ui/windowMenu.js
 @@ -1,11 +1,12 @@
@@ -1556,13 +1721,18 @@ index 27cecda..b238b86 100644
  
  var WindowMenu = class extends PopupMenu.PopupMenu {
      constructor(window, sourceActor) {
-@@ -24,6 +25,18 @@ var WindowMenu = class extends PopupMenu.PopupMenu {
+@@ -24,6 +25,23 @@ var WindowMenu = class extends PopupMenu.PopupMenu {
  
          let item;
  
 +        let s = RealmWindowMenu.windowMenuDebugString(window);
 +
 +        this.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(s));
++
++        item = RealmWindowMenu.enableFrameItem(window);
++        if (item) {
++            this.addMenuItem(item);
++        }
 +
 +        if (!window.is_on_all_workspaces()) {
 +            let realmSubmenu = RealmWindowMenu.realmWindowMenu(window);
@@ -1612,8 +1782,52 @@ index 3761881..b662d05 100644
          workspaceManager.disconnect(this._reorderWorkspacesId);
      }
  
+diff --git a/src/gnome-shell-plugin.c b/src/gnome-shell-plugin.c
+index 5364f04..c41e405 100644
+--- a/src/gnome-shell-plugin.c
++++ b/src/gnome-shell-plugin.c
+@@ -46,6 +46,7 @@
+ #include "shell-global-private.h"
+ #include "shell-perf-log.h"
+ #include "shell-wm-private.h"
++#include "shell-realms.h"
+ 
+ #define GNOME_TYPE_SHELL_PLUGIN (gnome_shell_plugin_get_type ())
+ G_DECLARE_FINAL_TYPE (GnomeShellPlugin, gnome_shell_plugin,
+@@ -214,6 +215,20 @@ gnome_shell_plugin_destroy (MetaPlugin         *plugin,
+                      actor);
+ }
+ 
++static void
++ensure_switched_context_current(guint ctx_id) {
++    ShellRealms *realms = shell_realms_get_default();
++    ShellRealmItem *realm = shell_realms_realm_by_context_id(realms, ctx_id);
++    if (!realm) {
++        g_warning ("No realm found for ctx_id = %d in context switch", ctx_id);
++        return;
++    }
++
++    if (!shell_realm_item_is_current(realm)) {
++      shell_realm_item_set_current(realm);
++    }
++}
++
+ static void
+ gnome_shell_plugin_switch_workspace (MetaPlugin         *plugin,
+                                      gint                from,
+@@ -221,6 +236,10 @@ gnome_shell_plugin_switch_workspace (MetaPlugin         *plugin,
+                                      MetaMotionDirection direction)
+ {
+   _shell_wm_switch_workspace (get_shell_wm(), from, to, direction);
++
++  if (direction == META_MOTION_CONTEXT_SWITCH) {
++      ensure_switched_context_current((guint) (to >> 16));
++  }
+ }
+ 
+ static void
 diff --git a/src/meson.build b/src/meson.build
-index 5fa9fdf..65c18ab 100644
+index 5fa9fdf..26bd9cb 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -125,6 +125,7 @@ libshell_private_headers = [
@@ -1624,12 +1838,14 @@ index 5fa9fdf..65c18ab 100644
    'shell-window-tracker-private.h',
    'shell-wm-private.h'
  ]
-@@ -147,6 +148,12 @@ libshell_sources = [
+@@ -147,6 +148,14 @@ libshell_sources = [
    'shell-perf-log.c',
    'shell-polkit-authentication-agent.c',
    'shell-polkit-authentication-agent.h',
 +  'shell-realm-item.c',
 +  'shell-realm-item.h',
++  'shell-realms-window-frames.c',
++  'shell-realms-window-frames.h',
 +  'shell-realms.c',
 +  'shell-realms.h',
 +  'shell-realm-tracker.c',
@@ -1983,10 +2199,10 @@ index e8705f5..c97510f 100644
  GjsContext *
 diff --git a/src/shell-realm-item.c b/src/shell-realm-item.c
 new file mode 100644
-index 0000000..6ea84bd
+index 0000000..ddb662c
 --- /dev/null
 +++ b/src/shell-realm-item.c
-@@ -0,0 +1,392 @@
+@@ -0,0 +1,396 @@
 +#include "shell-global.h"
 +#include "shell-realm-item.h"
 +#include "shell-realm-tracker.h"
@@ -2262,7 +2478,8 @@ index 0000000..6ea84bd
 +  set_status_flag (item, REALM_STATUS_RUNNING, value);
 +
 +  if (!value && item->context) {
-+    g_clear_object(&item->context);
++    meta_workspace_context_remove (item->context);
++    item->context = NULL;
 +  }
 +}
 +
@@ -2288,7 +2505,8 @@ index 0000000..6ea84bd
 +    item->status = status;
 +
 +    if (stopped) {
-+      g_clear_object(&item->context);
++      meta_workspace_context_remove (item->context);
++      item->context = NULL;
 +    }
 +  }
 +}
@@ -2330,7 +2548,10 @@ index 0000000..6ea84bd
 +static void shell_realm_item_dispose (GObject *object)
 +{
 +  ShellRealmItem *item = SHELL_REALM_ITEM (object);
-+  g_clear_object(&item->context);
++  if (item->context) {
++    meta_workspace_context_remove (item->context);
++    item->context = NULL;
++  }
 +  item->disposed = TRUE;
 +  G_OBJECT_CLASS(shell_realm_item_parent_class)->dispose (object);
 +}
@@ -2339,7 +2560,6 @@ index 0000000..6ea84bd
 +shell_realm_item_finalize (GObject *object)
 +{
 +  ShellRealmItem *item = SHELL_REALM_ITEM (object);
-+  g_message("ShellRealmItem: finalize (%s)", item->realm_name);
 +  g_free (item->realm_name);
 +  g_free (item->description);
 +  g_free (item->namespace);
@@ -2423,10 +2643,10 @@ index 0000000..8e9d8ec
 +#endif //__SHELL_REALM_ITEM_H__
 diff --git a/src/shell-realm-tracker.c b/src/shell-realm-tracker.c
 new file mode 100644
-index 0000000..97cb6ed
+index 0000000..2b3c10d
 --- /dev/null
 +++ b/src/shell-realm-tracker.c
-@@ -0,0 +1,297 @@
+@@ -0,0 +1,310 @@
 +#include "shell-realm-tracker.h"
 +#include "shell-realms-private.h"
 +
@@ -2474,8 +2694,6 @@ index 0000000..97cb6ed
 +  const gchar *description = NULL;
 +  const gchar *namespace = NULL;
 +  guint8 status = 0;
-+
-+  g_message ("ShellRealmTracker: on_realm_bus_signal(%s)", signal_name);
 +
 +  if (g_str_equal (signal_name, "RealmStarted")) {
 +
@@ -2558,6 +2776,21 @@ index 0000000..97cb6ed
 +}
 +
 +static void
++set_realm_current_finish (GObject *object, GAsyncResult *result, gpointer data)
++{
++  GError *error = NULL;
++  GVariant *response = g_dbus_connection_call_finish (G_DBUS_CONNECTION(object), result, &error);
++  if (!response) {
++    if (!g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
++      g_warning("MetaRealmDbus: Error calling 'SetCurrent' bus method: %s", error->message);
++    }
++    g_clear_error (&error);
++    return;
++  }
++  g_variant_unref (response);
++}
++
++static void
 +call_dbus_method (ShellRealmTracker *self, const gchar *method, GVariant *parameters, GAsyncReadyCallback callback, gpointer user_data)
 +{
 +  if (!self->dbus) {
@@ -2588,7 +2821,7 @@ index 0000000..97cb6ed
 +void
 +shell_realm_tracker_call_set_current (ShellRealmTracker *self, const char *realm_name)
 +{
-+  call_dbus_method (self, "SetCurrent", g_variant_new("(s)", realm_name), NULL, NULL);
++  call_dbus_method (self, "SetCurrent", g_variant_new("(s)", realm_name), set_realm_current_finish, NULL);
 +}
 +
 +
@@ -2746,7 +2979,7 @@ index 0000000..a979f95
 +#endif /* __SHELL_REALM_TRACKER_H__ */
 diff --git a/src/shell-realms-private.h b/src/shell-realms-private.h
 new file mode 100644
-index 0000000..16a81b2
+index 0000000..571f110
 --- /dev/null
 +++ b/src/shell-realms-private.h
 @@ -0,0 +1,21 @@
@@ -2754,6 +2987,7 @@ index 0000000..16a81b2
 +#define __SHELL_REALMS_PRIVATE_H__
 +#include <glib-object.h>
 +#include "shell-realms.h"
++#include "shell-realms-window-frames.h"
 +
 +
 +void shell_realms_untag_all (ShellRealms *realms);
@@ -2769,14 +3003,428 @@ index 0000000..16a81b2
 +void shell_realms_on_realm_stopped (ShellRealms *realms, const gchar *realm_name);
 +void shell_realms_on_realm_removed (ShellRealms *realms, const gchar *realm_name);
 +void shell_realms_on_realm_new (ShellRealms *realms, const gchar *realm_name, const gchar *description, guint8 status);
-+
 +#endif //__SHELL_REALMS_PRIVATE_H__
+diff --git a/src/shell-realms-window-frames.c b/src/shell-realms-window-frames.c
+new file mode 100644
+index 0000000..99a3aa7
+--- /dev/null
++++ b/src/shell-realms-window-frames.c
+@@ -0,0 +1,386 @@
++#include "shell-realms-window-frames.h"
++#include "shell-realms.h"
++
++#define CITADEL_SETTINGS_SCHEMA "com.subgraph.citadel"
++#define FRAME_COLOR_LIST_KEY "frame-color-list"
++#define REALM_FRAME_COLORS_KEY "realm-frame-colors"
++
++#define REALM_FRAME_ALPHA 200
++
++struct _ShellRealmsWindowFrames {
++    GObject parent;
++    GSettings *settings;
++    GHashTable *realm_frame_colors;
++    GList *default_colors;
++    GList *frame_disabled_windows;
++};
++
++G_DEFINE_TYPE (ShellRealmsWindowFrames, shell_realms_window_frames, G_TYPE_OBJECT);
++
++enum {
++    REALM_FRAME_COLORS_CHANGED,
++    LAST_SIGNAL,
++};
++
++static guint shell_realms_window_frames_signals [LAST_SIGNAL] = { 0 };
++
++static void
++shell_realms_window_frames_process_color (ShellRealmsWindowFrames *frames, const char *entry)
++{
++  GdkRGBA rgba;
++
++  gchar **split = g_strsplit (entry, ":", -1);
++
++  if (g_strv_length (split) != 2) {
++    g_warning("ShellRealmsWindowFrames: Unable to parse realm-frame-colors entry: %s", entry);
++    g_strfreev (split);
++    return;
++  }
++
++  if (!gdk_rgba_parse (&rgba, split[1])) {
++    g_warning("ShellRealmsWindowFrames: Failed to parse RGBA component of realm frame color entry: %s", entry);
++  } else {
++    g_hash_table_insert (frames->realm_frame_colors, g_strdup (split[0]), gdk_rgba_copy (&rgba));
++  }
++  g_strfreev (split);
++}
++
++static void
++load_realm_frame_colors (ShellRealmsWindowFrames *frames)
++{
++  guint n_entries, i;
++  char **entries;
++
++  entries = g_settings_get_strv (frames->settings, REALM_FRAME_COLORS_KEY);
++  n_entries = g_strv_length (entries);
++
++  for (i = 0; i < n_entries; i++) {
++    shell_realms_window_frames_process_color (frames, entries[i]);
++  }
++  g_strfreev (entries);
++
++}
++
++static void
++on_realm_frame_colors_changed(GSettings *settings, const gchar *key, ShellRealmsWindowFrames *frames)
++{
++  load_realm_frame_colors (frames);
++  g_signal_emit (frames, shell_realms_window_frames_signals[REALM_FRAME_COLORS_CHANGED], 0);
++}
++
++static void
++load_default_colors (ShellRealmsWindowFrames *frames)
++{
++  guint n_entries, i;
++  char **entries;
++  GdkRGBA rgba;
++
++  entries = g_settings_get_strv (frames->settings, FRAME_COLOR_LIST_KEY);
++  n_entries = g_strv_length (entries);
++
++  g_clear_list(&frames->default_colors, (GDestroyNotify) gdk_rgba_free);
++
++  for (i = 0; i < n_entries; i++) {
++    if (gdk_rgba_parse (&rgba, entries[i])) {
++      frames->default_colors = g_list_append (frames->default_colors, gdk_rgba_copy(&rgba));
++    }
++  }
++  g_strfreev (entries);
++}
++
++static void
++on_frame_color_list_changed (GSettings *settings, const gchar *key, ShellRealmsWindowFrames *frames)
++{
++  load_default_colors (frames);
++}
++
++static void
++shell_realms_window_frames_init (ShellRealmsWindowFrames *frames)
++{
++  frames->settings = g_settings_new (CITADEL_SETTINGS_SCHEMA);
++  frames->realm_frame_colors = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, (GDestroyNotify) gdk_rgba_free);
++  frames->default_colors = NULL;
++  frames->frame_disabled_windows = NULL;
++
++  g_signal_connect(frames->settings,
++                   "changed::" FRAME_COLOR_LIST_KEY,
++                   G_CALLBACK(on_frame_color_list_changed),
++                   frames);
++
++  g_signal_connect(frames->settings,
++                   "changed::" REALM_FRAME_COLORS_KEY,
++                   G_CALLBACK(on_realm_frame_colors_changed),
++                   frames);
++
++
++  load_default_colors (frames);
++  load_realm_frame_colors (frames);
++}
++
++static void
++shell_realms_window_frames_finalize (GObject *obj)
++{
++  ShellRealmsWindowFrames *frames = SHELL_REALMS_WINDOW_FRAMES (obj);
++  g_object_unref (frames->settings);
++  g_hash_table_destroy (frames->realm_frame_colors);
++  g_list_free_full (frames->default_colors, (GDestroyNotify) gdk_rgba_free);
++  g_list_free (frames->frame_disabled_windows);
++  G_OBJECT_CLASS (shell_realms_window_frames_parent_class)->finalize (obj);
++}
++
++static void
++shell_realms_window_frames_class_init (ShellRealmsWindowFramesClass *klass)
++{
++  GObjectClass *object_class = G_OBJECT_CLASS (klass);
++  object_class->finalize = shell_realms_window_frames_finalize;
++
++  shell_realms_window_frames_signals[REALM_FRAME_COLORS_CHANGED] =
++      g_signal_new ("realm-frame-colors-changed",
++                    G_TYPE_FROM_CLASS(klass),
++                    G_SIGNAL_RUN_LAST,
++                    0,
++                    NULL, NULL, NULL,
++                    G_TYPE_NONE, 0);
++}
++
++static gboolean
++disabled_list_contains (ShellRealmsWindowFrames *frames, guint32 window_id)
++{
++  return g_list_find (frames->frame_disabled_windows, GUINT_TO_POINTER(window_id)) != NULL;
++}
++
++static bool
++remove_from_disabled_list (ShellRealmsWindowFrames *frames, guint32 window_id)
++{
++  if (disabled_list_contains (frames, window_id)) {
++    frames->frame_disabled_windows = g_list_remove (frames->frame_disabled_windows, GUINT_TO_POINTER(window_id));
++    g_signal_emit (frames, shell_realms_window_frames_signals[REALM_FRAME_COLORS_CHANGED], 0);
++    return TRUE;
++  }
++  return FALSE;
++}
++
++static bool
++add_to_disabled_list (ShellRealmsWindowFrames *frames, guint32 window_id)
++{
++  if (!disabled_list_contains (frames, window_id)) {
++    frames->frame_disabled_windows = g_list_append (frames->frame_disabled_windows, GUINT_TO_POINTER(window_id));
++    g_signal_emit (frames, shell_realms_window_frames_signals[REALM_FRAME_COLORS_CHANGED], 0);
++    return TRUE;
++  }
++  return FALSE;
++}
++
++static gint
++color_compare(gconstpointer c1, gconstpointer c2) {
++  return gdk_rgba_equal (c1, c2) ? 0 : 1;
++}
++
++static GdkRGBA *
++allocate_color (ShellRealmsWindowFrames *frames)
++{
++  guint n_colors = g_list_length (frames->default_colors);
++
++  // 1) No default colors? return a built in color
++  if (n_colors == 0) {
++    GdkRGBA rgba;
++    gdk_rgba_parse (&rgba, "rgb(153, 193, 241)");
++    return gdk_rgba_copy (&rgba);
++  }
++
++  // 2) No default colors? Find first color on default color list that isn't used already
++  GList *used_colors = g_hash_table_get_values (frames->realm_frame_colors);
++  for (GList *iter = frames->default_colors; iter; iter = iter->next) {
++    GdkRGBA *rgba = iter->data;
++    if (!g_list_find_custom (used_colors, rgba, color_compare)) {
++      return rgba;
++    }
++  }
++  g_list_free (used_colors);
++
++  // 3) Choose a random element of the default list
++  guint index = (guint) g_random_int_range(0, (gint32) n_colors);
++  return g_list_nth_data (frames->default_colors, index);
++}
++
++static void
++shell_realms_window_frames_store_colors (ShellRealmsWindowFrames *frames)
++{
++  GHashTableIter iter;
++  gpointer key, value;
++
++  GPtrArray *entries = g_ptr_array_new_with_free_func(g_free);
++
++  g_hash_table_iter_init (&iter, frames->realm_frame_colors);
++
++  while (g_hash_table_iter_next(&iter, &key, &value)) {
++    gchar *name = key;
++    GdkRGBA *rgba = value;
++    char *rgba_str = gdk_rgba_to_string (rgba);
++    gchar *entry = g_strconcat (name, ":", rgba_str, NULL);
++    g_ptr_array_add (entries, entry);
++    g_free (rgba_str);
++  }
++
++  g_ptr_array_sort (entries, (GCompareFunc) g_strcmp0);
++  g_ptr_array_add (entries, NULL);
++  g_settings_set_strv (frames->settings, REALM_FRAME_COLORS_KEY, (const gchar * const *) entries->pdata);
++
++  g_ptr_array_unref (entries);
++}
++
++static const char *
++shell_realms_window_frames_realm_name_for_window (ShellRealmsWindowFrames *frames, ShellRealms *realms, MetaWindow *window)
++{
++
++  ShellRealmItem *realm = shell_realms_realm_by_window (realms, window);
++
++  if (realm) {
++    return shell_realm_item_get_realm_name (realm);
++  } else {
++    return NULL;
++  }
++}
++
++static void
++on_window_unmanaged (MetaWindow *window, ShellRealmsWindowFrames *frames)
++{
++  g_signal_handlers_disconnect_by_func (window, G_CALLBACK (on_window_unmanaged), frames);
++  guint32 id = meta_window_get_stable_sequence (window);
++  remove_from_disabled_list (frames, id);
++}
++
++static gboolean
++is_ignored_window (MetaWindow *window)
++{
++  switch (meta_window_get_window_type (window)) {
++    case META_WINDOW_MENU:
++    case META_WINDOW_TOOLTIP:
++    case META_WINDOW_POPUP_MENU:
++    case META_WINDOW_DROPDOWN_MENU:
++      return TRUE;
++    default:
++      return FALSE;
++  }
++}
++
++/**
++ * shell_realms_window_frames_is_frame_enabled:
++ * @frames: a #ShellRealmsWindowFrames instance
++ * @window: a #MetaWindow
++ *
++ * Return #TRUE if frame has not been disabled for this window.
++ *
++ * Returns: #TRUE if frame has not been disabled for this window.
++ */
++gboolean
++shell_realms_window_frames_is_frame_enabled (ShellRealmsWindowFrames *frames, MetaWindow *window)
++{
++  guint32 id = meta_window_get_stable_sequence (window);
++  return !disabled_list_contains (frames, id);
++}
++
++/**
++ * shell_realms_window_frames_has_frame:
++ * @frames: a #ShellRealmsWindowFrames instance
++ * @window: a #MetaWindow
++ *
++ * Return #TRUE if this window needs a frame.
++ *
++ * Returns: #TRUE if a frame should be drawn for this window.
++ */
++gboolean
++shell_realms_window_frames_has_frame (ShellRealmsWindowFrames *frames, MetaWindow *window)
++{
++  return !is_ignored_window(window) && meta_window_is_on_foreign_workspace_context (window);
++}
++
++/**
++ * shell_realms_window_frames_set_frame_enabled:
++ * @frames: a #ShellRealmsWindowFrames instance
++ * @window: a #MetaWindow
++ * @enabled: Set to #FALSE to disable drawing frame for this window
++ *
++ */
++void
++shell_realms_window_frames_set_frame_enabled (ShellRealmsWindowFrames *frames, MetaWindow *window, gboolean enabled)
++{
++  guint32 id = meta_window_get_stable_sequence (window);
++
++  if (enabled) {
++    if (remove_from_disabled_list (frames, id)) {
++      g_signal_handlers_disconnect_by_func (window, G_CALLBACK (on_window_unmanaged), frames);
++    }
++  } else if (add_to_disabled_list (frames, id)) {
++    g_signal_connect_object (window, "unmanaged", G_CALLBACK(on_window_unmanaged), frames, 0);
++  }
++}
++
++static ClutterColor *
++rgba_to_clutter_color(GdkRGBA *rgba)
++{
++  guint8 r = (guint8) (0.5 + CLAMP(rgba->red, 0.0, 1.0) * 255.0);
++  guint8 g = (guint8) (0.5 + CLAMP(rgba->green, 0.0, 1.0) * 255.0);
++  guint8 b = (guint8) (0.5 + CLAMP(rgba->blue, 0.0, 1.0) * 255.0);
++
++  return clutter_color_new (r, g, b, REALM_FRAME_ALPHA);
++}
++
++/**
++ * shell_realms_window_frames_color_for_window:
++ * @frames: a #ShellRealmsWindowFrames instance
++ * @window: a #MetaWindow
++ *
++ * Returns a color to use for painting window frame.
++ *
++ * Return value: (transfer full) (nullable): The frame color or %NULL if no frame should be drawn.
++ */
++ClutterColor *
++shell_realms_window_frames_color_for_window (ShellRealmsWindowFrames *frames, MetaWindow *window)
++{
++  if (!shell_realms_window_frames_has_frame (frames, window)) {
++    return NULL;
++  }
++
++  ShellRealms *realms = shell_realms_get_default();
++
++  const gchar *name = shell_realms_window_frames_realm_name_for_window (frames, realms, window);
++
++  GdkRGBA *rgba = g_hash_table_lookup (frames->realm_frame_colors, name);
++
++  if (!rgba) {
++    rgba = allocate_color (frames);
++    g_hash_table_insert (frames->realm_frame_colors, g_strdup(name), rgba);
++    shell_realms_window_frames_store_colors (frames);
++  }
++
++  return rgba_to_clutter_color (rgba);
++}
++
++/**
++ * shell_realms_window_frames_label_for_window:
++ * @frames: a #ShellRealmsWindowFrames instance
++ * @window: a #MetaWindow
++ *
++ * Return the label text for window if the window requires a frame.
++ *
++ * Return value: (transfer none) (nullable): The label text or %NULL if no label should be displayed
++ */
++const gchar *
++shell_realms_window_frames_label_for_window (ShellRealmsWindowFrames *frames, MetaWindow *window)
++{
++  if (!shell_realms_window_frames_has_frame (frames, window)) {
++    return NULL;
++  }
++  if (meta_window_get_window_type (window) != META_WINDOW_NORMAL) {
++    return NULL;
++  }
++
++  ShellRealms *realms = shell_realms_get_default();
++
++  if (shell_realms_is_citadel_window (realms, window)) {
++    return "Citadel";
++  } else {
++    return shell_realms_window_frames_realm_name_for_window (frames, realms, window);
++  }
++}
+diff --git a/src/shell-realms-window-frames.h b/src/shell-realms-window-frames.h
+new file mode 100644
+index 0000000..0235473
+--- /dev/null
++++ b/src/shell-realms-window-frames.h
+@@ -0,0 +1,17 @@
++#ifndef __SHELL_REALMS_WINDOW_FRAMES_H__
++#define __SHELL_REALMS_WINDOW_FRAMES_H__
++
++#include <glib-object.h>
++#include <clutter/clutter.h>
++#include <meta/window.h>
++
++#define SHELL_TYPE_REALMS_WINDOW_FRAMES (shell_realms_window_frames_get_type())
++G_DECLARE_FINAL_TYPE (ShellRealmsWindowFrames, shell_realms_window_frames, SHELL, REALMS_WINDOW_FRAMES, GObject)
++
++gboolean shell_realms_window_frames_has_frame (ShellRealmsWindowFrames *frames, MetaWindow *window);
++gboolean shell_realms_window_frames_is_frame_enabled (ShellRealmsWindowFrames *frames, MetaWindow *window);
++void shell_realms_window_frames_set_frame_enabled (ShellRealmsWindowFrames *frames, MetaWindow *window, gboolean enabled);
++ClutterColor *shell_realms_window_frames_color_for_window (ShellRealmsWindowFrames *frames, MetaWindow *window);
++const gchar *shell_realms_window_frames_label_for_window (ShellRealmsWindowFrames *frames, MetaWindow *window);
++
++#endif // __SHELL_REALMS_WINDOW_FRAMES_H__
 diff --git a/src/shell-realms.c b/src/shell-realms.c
 new file mode 100644
-index 0000000..44ee2b7
+index 0000000..01718b0
 --- /dev/null
 +++ b/src/shell-realms.c
-@@ -0,0 +1,442 @@
+@@ -0,0 +1,460 @@
 +
 +#include <meta/display.h>
 +#include <meta/meta-workspace-manager.h>
@@ -2790,6 +3438,7 @@ index 0000000..44ee2b7
 +    GHashTable *realms;
 +    GList *running_realms;
 +    ShellRealmItem *current_realm;
++    ShellRealmsWindowFrames *frames;
 +};
 +
 +G_DEFINE_TYPE (ShellRealms, shell_realms, G_TYPE_OBJECT);
@@ -2938,6 +3587,20 @@ index 0000000..44ee2b7
 +shell_realms_get_all_realms (ShellRealms *realms)
 +{
 +  return g_hash_table_get_values (realms->realms);
++}
++
++/**
++ * shell_realms_window_frames:
++ * @realms: the #ShellRealms instance
++ *
++ * Returns the window frames manager.
++ *
++ * Returns: (transfer none): a #ShellRealmsWindowFrames instance
++ */
++ShellRealmsWindowFrames *
++shell_realms_window_frames (ShellRealms *realms)
++{
++  return realms->frames;
 +}
 +
 +static gboolean
@@ -3101,7 +3764,7 @@ index 0000000..44ee2b7
 +{
 +  ShellRealmItem *item = shell_realms_realm_by_name (realms, realm_name);
 +
-+  if (realms->current_realm != item) {
++  if (item && realms->current_realm != item) {
 +    shell_realms_set_current_item (realms, item);
 +    shell_realms_update_running_list_for_item (realms, item);
 +    shell_realm_item_activate_context (item);
@@ -3161,6 +3824,7 @@ index 0000000..44ee2b7
 +  realms->realms = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 +  realms->running_realms = NULL;
 +  realms->current_realm = NULL;
++  realms->frames = g_object_new (SHELL_TYPE_REALMS_WINDOW_FRAMES, NULL);
 +}
 +
 +static void
@@ -3170,6 +3834,8 @@ index 0000000..44ee2b7
 +  realms->current_realm = NULL;
 +  g_list_free_full (realms->running_realms, g_object_unref);
 +  g_hash_table_destroy (realms->realms);
++  g_object_unref (realms->frames);
++  realms->frames = NULL;
 +  G_OBJECT_CLASS (shell_realms_parent_class)->finalize (obj);
 +}
 +
@@ -3219,18 +3885,20 @@ index 0000000..44ee2b7
 +                                                        SHELL_TYPE_REALM_ITEM,
 +                                                        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
 +}
+\ No newline at end of file
 diff --git a/src/shell-realms.h b/src/shell-realms.h
 new file mode 100644
-index 0000000..a1a3353
+index 0000000..198b510
 --- /dev/null
 +++ b/src/shell-realms.h
-@@ -0,0 +1,23 @@
+@@ -0,0 +1,26 @@
 +#ifndef __SHELL_REALMS_H__
 +#define __SHELL_REALMS_H__
 +
 +#include <glib-object.h>
 +#include <meta/window.h>
 +#include "shell-realm-item.h"
++#include "shell-realms-window-frames.h"
 +
 +#define SHELL_TYPE_REALMS (shell_realms_get_type())
 +G_DECLARE_FINAL_TYPE(ShellRealms, shell_realms, SHELL, REALMS, GObject)
@@ -3244,12 +3912,14 @@ index 0000000..a1a3353
 +ShellRealmItem *shell_realms_realm_by_window (ShellRealms *realms, MetaWindow *window);
 +gboolean shell_realms_is_citadel_window (ShellRealms *realms, MetaWindow *window);
 +
++ShellRealmsWindowFrames *shell_realms_window_frames (ShellRealms *realms);
++
 +GList *shell_realms_get_running_realms (ShellRealms *realms);
 +GList *shell_realms_get_all_realms (ShellRealms *realms);
 +
 +#endif //__SHELL_REALMS_H__
 diff --git a/src/shell-window-tracker.c b/src/shell-window-tracker.c
-index 5c9d2ec..0ca7004 100644
+index 5c9d2ec..d75db22 100644
 --- a/src/shell-window-tracker.c
 +++ b/src/shell-window-tracker.c
 @@ -15,6 +15,7 @@
@@ -3291,17 +3961,16 @@ index 5c9d2ec..0ca7004 100644
    g_autofree char *app_prefix = NULL;
  
    appsys = shell_app_system_get_default ();
-@@ -154,6 +172,9 @@ get_app_from_window_wmclass (MetaWindow  *window)
+@@ -154,6 +172,8 @@ get_app_from_window_wmclass (MetaWindow  *window)
    if (sandbox_id)
      app_prefix = g_strdup_printf ("%s.", sandbox_id);
  
 +  realm_name = get_window_realm_name (window);
 +
-+  g_warning ("ShellWindowTracker: get_app_from_window_wmclass() realm_name=%s", realm_name ? realm_name : "None");
    /* Notes on the heuristics used here:
       much of the complexity here comes from the desire to support
       Chrome apps.
-@@ -191,23 +212,23 @@ get_app_from_window_wmclass (MetaWindow  *window)
+@@ -191,23 +211,23 @@ get_app_from_window_wmclass (MetaWindow  *window)
  
    /* first try a match from WM_CLASS (instance part) to StartupWMClass */
    wm_instance = meta_window_get_wm_class_instance (window);
@@ -3329,7 +3998,7 @@ index 5c9d2ec..0ca7004 100644
    if (app != NULL && check_app_id_prefix (app, app_prefix))
      return g_object_ref (app);
  
-@@ -236,7 +257,19 @@ get_app_from_id (MetaWindow  *window,
+@@ -236,7 +256,19 @@ get_app_from_id (MetaWindow  *window,
  
    appsys = shell_app_system_get_default ();
  
