@@ -1,0 +1,5 @@
+KERNEL=="nbd*", ENV{UDISKS_IGNORE}="1"
+KERNEL=="loop*", ENV{UDISKS_IGNORE}="1"
+SYMLINK=="citadel/*", ENV{UDISKS_IGNORE}="1"
+SYMLINK=="mapper/verity-*", ENV{UDISKS_IGNORE}="1"
+SYMLINK=="mapper/rootfs", ENV{UDISKS_IGNORE}="1"

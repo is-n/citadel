@@ -1,0 +1,23 @@
+From b881ec38ee4e844a8bff836b0283ecac0655f6ee Mon Sep 17 00:00:00 2001
+From: Bruce Leidl <bruce@subgraph.com>
+Date: Tue, 30 Nov 2021 15:47:31 -0500
+Subject: [PATCH] Don't display ignored disks
+
+---
+ src/disks/gdudevicetreemodel.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/disks/gdudevicetreemodel.c b/src/disks/gdudevicetreemodel.c
+index 2157276..ee7d910 100644
+--- a/src/disks/gdudevicetreemodel.c
++++ b/src/disks/gdudevicetreemodel.c
+@@ -1196,6 +1196,9 @@ should_include_block (UDisksObject *object)
+   partition = udisks_object_peek_partition (object);
+   loop = udisks_object_peek_loop (object);
+ 
++  if (udisks_block_get_hint_ignore (block))
++    goto out;
++
+   if (gdu_utils_has_userspace_mount_option (block, "x-gdu.hide"))
+     goto out;
+ 

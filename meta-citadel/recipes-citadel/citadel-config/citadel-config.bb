@@ -25,6 +25,7 @@ SYSCTL_CONFIG = "\
 UDEV_RULES = "\
     file://udev/citadel-network.rules \
     file://udev/pci-pm.rules \
+    file://udev/udisks2-hide.rules \
 "
 DEFAULT_PASSWORD = "\
     file://citadel-setpassword.sh \
@@ -143,6 +144,7 @@ do_install() {
     install -m 0755 ${WORKDIR}/citadel-ifconfig.sh ${D}${libexecdir}
 
     install -m 0644 ${WORKDIR}/udev/pci-pm.rules ${D}${sysconfdir}/udev/rules.d/
+    install -m 0644 ${WORKDIR}/udev/udisks2-hide.rules ${D}${sysconfdir}/udev/rules.d/
 
     install -m 0644 ${WORKDIR}/citadel-installer.session ${D}${datadir}/gnome-session/sessions/
     install -m 0644 ${WORKDIR}/citadel-installer.json ${D}${datadir}/gnome-shell/modes/

@@ -32,7 +32,9 @@ EXTRA_OEMESON += "-Dman=false"
 def gnome_verdir(v):
     return oe.utils.trim_version(v, 1)
 
-SRC_URI = "${GNOME_MIRROR}/${GNOMEBN}/${@gnome_verdir("${PV}")}/${GNOMEBN}-${PV}.tar.${GNOME_COMPRESS_TYPE};name=archive"
+SRC_URI = "${GNOME_MIRROR}/${GNOMEBN}/${@gnome_verdir("${PV}")}/${GNOMEBN}-${PV}.tar.${GNOME_COMPRESS_TYPE};name=archive \
+           file://0001-Don-t-display-ignored-disks.patch \
+           "
 SRC_URI[archive.sha256sum] = "8743c98fd656062ef862933efe30c5be4c6b322ec02eee154ec70d08ed0895df"
 
 FILES_${PN} += " \
