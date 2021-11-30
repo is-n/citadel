@@ -1,4 +1,4 @@
-From 38a41a143b97b7dcf0512d6509e61d11582e681d Mon Sep 17 00:00:00 2001
+From 5e5da06bd97175bed4a2719e5e67a5b2b51e4efc Mon Sep 17 00:00:00 2001
 From: David McKinney <mckinney@subgraph.com>
 Date: Fri, 12 Feb 2021 13:58:36 +0000
 Subject: [PATCH] Remove log out label from power off in status UI

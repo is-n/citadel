@@ -1,4 +1,4 @@
-From 12fd2083761c1d432a2b505a210d1289b2b1624f Mon Sep 17 00:00:00 2001
+From 9d4edfc419cdb2868a6a69bf1ed4565478789a35 Mon Sep 17 00:00:00 2001
 From: David McKinney <mckinney@subgraph.com>
 Date: Wed, 8 Jul 2020 14:07:06 +0000
 Subject: [PATCH] Remove calendar server, fix build
@@ -12,10 +12,10 @@ Subject: [PATCH] Remove calendar server, fix build
  5 files changed, 9 insertions(+), 9 deletions(-)
 
 diff --git a/js/dbusServices/meson.build b/js/dbusServices/meson.build
-index 2f047bb..6484cdc 100644
+index 68e8bd1..16efaeb 100644
 --- a/js/dbusServices/meson.build
 +++ b/js/dbusServices/meson.build
-@@ -26,7 +26,7 @@ foreach service, dir : dbus_services
+@@ -27,7 +27,7 @@ foreach service, dir : dbus_services
  
    serviceconf = configuration_data()
    serviceconf.set('service', service)
@@ -25,12 +25,12 @@ index 2f047bb..6484cdc 100644
  
    configure_file(
 diff --git a/meson.build b/meson.build
-index d86879a..c23ab0b 100644
+index 58f66cd..1dc4729 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -18,8 +18,8 @@ cogl_pc = 'mutter-cogl-' + mutter_api_version
- cogl_pango_pc = 'mutter-cogl-pango-' + mutter_api_version
+@@ -19,8 +19,8 @@ cogl_pango_pc = 'mutter-cogl-pango-' + mutter_api_version
  libmutter_pc = 'libmutter-' + mutter_api_version
+ libmutter_test_pc = 'libmutter-test-' + mutter_api_version
  
 -ecal_req = '>= 3.33.1'
 -eds_req = '>= 3.33.1'
@@ -39,7 +39,7 @@ index d86879a..c23ab0b 100644
  gcr_req = '>= 3.7.5'
  gio_req = '>= 2.56.0'
  gi_req = '>= 1.49.1'
-@@ -71,8 +71,8 @@ else
+@@ -72,8 +72,8 @@ else
  endif
  
  atk_bridge_dep = dependency('atk-bridge-2.0')
@@ -50,7 +50,7 @@ index d86879a..c23ab0b 100644
  gcr_dep = dependency('gcr-base-3', version: gcr_req)
  gdk_x11_dep = dependency('gdk-x11-3.0')
  gdk_pixbuf_dep = dependency('gdk-pixbuf-2.0')
-@@ -134,7 +134,7 @@ endif
+@@ -139,7 +139,7 @@ endif
  
  mutter_typelibdir = mutter_dep.get_pkgconfig_variable('typelibdir')
  python = find_program('python3')
@@ -60,7 +60,7 @@ index d86879a..c23ab0b 100644
  cc = meson.get_compiler('c')
  
 diff --git a/src/meson.build b/src/meson.build
-index a7c56bb..3118e67 100644
+index 53b8b52..5fa9fdf 100644
 --- a/src/meson.build
 +++ b/src/meson.build
 @@ -1,7 +1,7 @@
@@ -73,10 +73,10 @@ index a7c56bb..3118e67 100644
  subdir('st')
  subdir('tray')
 diff --git a/subprojects/extensions-app/js/meson.build b/subprojects/extensions-app/js/meson.build
-index a378a7e..f2a37ba 100644
+index f311db6..8f7bba4 100644
 --- a/subprojects/extensions-app/js/meson.build
 +++ b/subprojects/extensions-app/js/meson.build
-@@ -5,7 +5,7 @@ launcherconf.set('PACKAGE_VERSION', meson.project_version())
+@@ -9,7 +9,7 @@ endif
  launcherconf.set('prefix', prefix)
  launcherconf.set('libdir', libdir)
  launcherconf.set('pkgdatadir', pkgdatadir)
@@ -86,10 +86,10 @@ index a378a7e..f2a37ba 100644
  configure_file(
    input: prgname + '.in',
 diff --git a/subprojects/extensions-app/meson.build b/subprojects/extensions-app/meson.build
-index 4acd94c..c6bdd5f 100644
+index 6143eef..a619f63 100644
 --- a/subprojects/extensions-app/meson.build
 +++ b/subprojects/extensions-app/meson.build
-@@ -35,7 +35,7 @@ localedir = join_paths(datadir, 'locale')
+@@ -44,7 +44,7 @@ localedir = join_paths(datadir, 'locale')
  metainfodir = join_paths(datadir, 'metainfo')
  servicedir = join_paths(datadir, 'dbus-1', 'services')
  

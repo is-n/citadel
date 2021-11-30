@@ -5,7 +5,7 @@ MAJ_VER = "${@oe.utils.trim_version("${PV}", 2)}"
 SRC_URI = "http://ftp.gnome.org/pub/gnome/sources/gtk/${MAJ_VER}/gtk-${PV}.tar.xz \
           "
 
-SRC_URI[sha256sum] = "e0a1508f441686c3a20dfec48af533b19a4b2e017c18eaee31dccdb7d292505b"
+SRC_URI[sha256sum] = "0faada983dc6b0bc409cb34c1713c1f3267e67c093f86b1e3b17db6100a3ddf4"
 
 S = "${WORKDIR}/gtk-${PV}"
 

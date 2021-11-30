@@ -37,7 +37,7 @@ def gnome_verdir(v):
 
 SRC_URI = "${GNOME_MIRROR}/${GNOMEBN}/${@gnome_verdir("${PV}")}/${GNOMEBN}-${PV}.tar.${GNOME_COMPRESS_TYPE};name=archive"
 
-SRC_URI[archive.sha256sum] = "a5696222ad353fcf9a07c406e287ecc9138e250645cb2a5941a88ff0685658c1"
+SRC_URI[archive.sha256sum] = "ea0c71484c65ce2cc11376f9b01e6211fa4a7ffd334f4307fc52c93f0fddd4c7"
 
 
 #

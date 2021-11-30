@@ -1,4 +1,4 @@
-From 724ea2e98f186456ea984fe9250f8650ed025a9c Mon Sep 17 00:00:00 2001
+From ac70fbe1edeef149c55d5779008429aec9945b76 Mon Sep 17 00:00:00 2001
 From: Bruce Leidl <bruce@subgraph.com>
 Date: Tue, 5 Oct 2021 11:17:47 +0000
 Subject: [PATCH] Disabled calendar events from user session

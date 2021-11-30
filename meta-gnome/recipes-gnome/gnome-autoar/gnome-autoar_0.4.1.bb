@@ -7,10 +7,12 @@ DEPENDS = " \
     libarchive \
 "
 
+GNOMEBASEBUILDCLASS = "meson"
+GIR_MESON_ENABLE_FLAG = "enabled"
+GTKDOC_MESON_OPTION = "gtk_doc"
 inherit gnomebase gobject-introspection gtk-doc vala
 
-SRC_URI[archive.md5sum] = "3149496d0189623a8e1289bbab4d8385"
-SRC_URI[archive.sha256sum] = "0e78713e6f0de339fdee16bab82753ae290fe80fa7b4ba6e3db8c1465b81d0f8"
+SRC_URI[archive.sha256sum] = "646bd50ebad92d91c1be89097a15364156157442cac1471ded7ecb27d9a9150e"
 
 do_compile_prepend() {
     export GIR_EXTRA_LIBS_PATH="${B}/gnome-autoar/.libs"

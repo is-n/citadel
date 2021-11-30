@@ -49,7 +49,7 @@ SRC_URI = "${GNOME_MIRROR}/${GNOMEBN}/${@gnome_verdir("${PV}")}/${GNOMEBN}-${PV}
            file://0001-Citadel-changes-to-Mutter.patch \
            "
 
-SRC_URI[archive.sha256sum] = "fa80a1a744044d88ebfd677ff03203d67705ed2cd624ea06cbb8b58948cdf89e"
+SRC_URI[archive.sha256sum] = "58e63fd0bc43f35134f21313aff4aebf92c829d6df4dc99a044a1e376691e3f3"
 
 # x11 is still mandatory - see meson.build
 REQUIRED_DISTRO_FEATURES = "x11 systemd"

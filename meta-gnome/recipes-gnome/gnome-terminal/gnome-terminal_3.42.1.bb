@@ -19,7 +19,7 @@ DEPENDS = " \
 GNOMEBASEBUILDCLASS = "meson"
 inherit gnomebase gsettings gnome-help gettext itstool upstream-version-is-even
 
-SRC_URI[archive.sha256sum] = "b016d89efc3fbc2a85a8ea664077a06158a462c03c222d82478ce01531d5390c"
+SRC_URI[archive.sha256sum] = "c319b1405501b8c7693e616f48eced41695d2e786148ca5f9e27bc7d98f4aeb1"
 
 EXTRA_OEMESON = "-Ddocs=false -Dnautilus_extension=false -Dsearch_provider=false"
 

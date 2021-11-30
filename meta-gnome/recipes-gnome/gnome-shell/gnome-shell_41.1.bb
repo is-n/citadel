@@ -20,7 +20,7 @@ SRC_URI = "${GNOME_MIRROR}/${GNOMEBN}/${@gnome_verdir("${PV}")}/${GNOMEBN}-${PV}
            file://0002-Citadel-Gnome-Shell-changes.patch \
            "
 
-SRC_URI[archive.sha256sum] = "52f971e85140e5de74b9369ef6656e49ce95af1f232fc1e0df1f046129ab4f65"
+SRC_URI[archive.sha256sum] = "5f742456dfe00605c0f090a3728ca62797bc49e50af852bbd7285da1a0517ff6"
 
 
 DEPENDS = " \
