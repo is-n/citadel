@@ -5,22 +5,15 @@ REQUIRED_DISTRO_FEATURES = "x11 systemd pam"
 
 ERROR_QA_remove = "unknown-configure-option"
 
+SRCREV = "d85bd654a3c830a8c3982286c1876321c96faf7d"
+
+EXTERNAL_TREE_VAR="CITADEL_GNOME_SHELL_PATH"
+GIT_URI = "gitsm://github.com/brl/gnome-shell.git;branch=citadel;protocol=https"
 
 GNOMEBASEBUILDCLASS = "meson"
-inherit gnomebase gsettings gettext gobject-introspection gobject-introspection-data features_check bash-completion
 
-def gnome_verdir(v):
-    return oe.utils.trim_version(v, 1)
+inherit gnomebase gsettings gettext gobject-introspection gobject-introspection-data features_check bash-completion external-tree
 
-SRC_URI = "${GNOME_MIRROR}/${GNOMEBN}/${@gnome_verdir("${PV}")}/${GNOMEBN}-${PV}.tar.${GNOME_COMPRESS_TYPE};name=archive \
-           file://0001-do-not-use-python-path-from-build-environment.patch \
-           file://0001-Remove-calendar-server-fix-build.patch \
-           file://0001-Remove-log-out-label-from-power-off-in-status-UI.patch \
-           file://0001-Disabled-calendar-events-from-user-session.patch \
-           file://0002-Citadel-Gnome-Shell-changes.patch \
-           "
-
-SRC_URI[archive.sha256sum] = "5f742456dfe00605c0f090a3728ca62797bc49e50af852bbd7285da1a0517ff6"
 
 
 DEPENDS = " \

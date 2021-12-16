@@ -37,19 +37,14 @@ DEPENDS = " \
 
 RDEPENDS_${PN} += " xserver-xorg-xwayland zenity"
 
+SRCREV = "7cab502754edef977215bdfc9f8dfa0849a426f3"
+
+EXTERNAL_TREE_VAR="CITADEL_MUTTER_PATH"
+GIT_URI = "git://github.com/brl/mutter.git;branch=citadel;protocol=https"
+
 GNOMEBASEBUILDCLASS = "meson"
 
-inherit gnomebase gsettings gobject-introspection gettext upstream-version-is-even features_check
-
-def gnome_verdir(v):
-    return oe.utils.trim_version(v, 1)
-
-SRC_URI = "${GNOME_MIRROR}/${GNOMEBN}/${@gnome_verdir("${PV}")}/${GNOMEBN}-${PV}.tar.${GNOME_COMPRESS_TYPE};name=archive \
-           file://0001-Fix-libmutter_dep-in-meson.build-for-Citadel-builds.patch \
-           file://0001-Citadel-changes-to-Mutter.patch \
-           "
-
-SRC_URI[archive.sha256sum] = "58e63fd0bc43f35134f21313aff4aebf92c829d6df4dc99a044a1e376691e3f3"
+inherit gnomebase gsettings gobject-introspection gettext upstream-version-is-even features_check external-tree
 
 # x11 is still mandatory - see meson.build
 REQUIRED_DISTRO_FEATURES = "x11 systemd"

@@ -215,3 +215,7 @@ INHERIT+="toaster buildhistory"
 #
 # CITADEL_TOOLS_PATH = "/home/user/citadel-tools"
 #
+# Same as above for GNOME Shell and Mutter:
+#
+# CITADEL_GNOME_SHELL_PATH = "/home/user/citadel-gnome/gnome-shell"
+# CITADEL_MUTTER_PATH = "/home/user/citadel-gnome/mutter"
