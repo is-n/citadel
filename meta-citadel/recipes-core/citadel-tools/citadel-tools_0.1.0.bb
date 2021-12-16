@@ -8,7 +8,7 @@ inherit cargo systemd gsettings
 #
 # Update this when changes are pushed to github
 #
-SRCREV = "663478072cee9d988bff70caa3bfaa0932343152"
+SRCREV = "668227af1e2b01fa0a06216eb25a4e3251f50aba"
 
 GIT_URI = "git://github.com/brl/citadel-tools.git;protocol=https"
 
@@ -21,6 +21,7 @@ GIT_URI = "git://github.com/brl/citadel-tools.git;protocol=https"
 # the dependency list.
 
 SRC_URI += " \
+    crate://crates.io/acl-sys/1.2.2 \
     crate://crates.io/addr2line/0.15.2 \
     crate://crates.io/adler/1.0.2 \
     crate://crates.io/aho-corasick/0.7.18 \
@@ -150,6 +151,7 @@ SRC_URI += " \
     crate://crates.io/pin-utils/0.1.0 \
     crate://crates.io/pkg-config/0.3.19 \
     crate://crates.io/polling/2.1.0 \
+    crate://crates.io/posix-acl/1.0.0 \
     crate://crates.io/ppv-lite86/0.2.10 \
     crate://crates.io/proc-macro-crate/0.1.5 \
     crate://crates.io/proc-macro-crate/1.0.0 \
@@ -174,6 +176,7 @@ SRC_URI += " \
     crate://crates.io/redox_termios/0.1.2 \
     crate://crates.io/regex-syntax/0.6.25 \
     crate://crates.io/regex/1.5.4 \
+    crate://crates.io/remove_dir_all/0.5.3 \
     crate://crates.io/rpassword/4.0.5 \
     crate://crates.io/rustc-demangle/0.1.20 \
     crate://crates.io/rustc_version/0.3.3 \
@@ -208,6 +211,7 @@ SRC_URI += " \
     crate://crates.io/synstructure/0.12.5 \
     crate://crates.io/system-deps/1.3.2 \
     crate://crates.io/system-deps/3.2.0 \
+    crate://crates.io/tempfile/3.2.0 \
     crate://crates.io/termion/1.5.6 \
     crate://crates.io/textwrap/0.11.0 \
     crate://crates.io/thiserror-impl/1.0.26 \
@@ -244,7 +248,7 @@ SRC_URI += " \
 
 export SODIUM_USE_PKG_CONFIG = "1"
 
-DEPENDS = "libsodium openssl dbus gtk+3 glib-2.0"
+DEPENDS = "libsodium openssl dbus gtk+3 glib-2.0 acl"
 BBCLASSEXTEND = "native"
 PACKAGES =+ "${PN}-realms ${PN}-tools ${PN}-mkimage ${PN}-boot"
 
