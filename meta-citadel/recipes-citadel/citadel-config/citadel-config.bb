@@ -69,15 +69,15 @@ SRC_URI = "\
 "
 
 USERADD_PACKAGES = "${PN}"
-USERADD_PARAM_${PN} = "-m -u 1000 -s /bin/bash citadel"
+USERADD_PARAM:${PN} = "-m -u 1000 -s /bin/bash citadel"
 INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
 
 # for citadel-ifconfig.sh
-RDEPENDS_${PN} = "bash"
+RDEPENDS:${PN} = "bash"
 
 inherit allarch systemd useradd
 
-SYSTEMD_SERVICE_${PN} = "zram-swap.service watch-run-user.path sway-session-switcher.service x11-session-switcher.service citadel-installer-backend.service installer-session-switcher.service citadel-setpassword.service"
+SYSTEMD_SERVICE:${PN} = "zram-swap.service watch-run-user.path sway-session-switcher.service x11-session-switcher.service citadel-installer-backend.service installer-session-switcher.service citadel-setpassword.service"
 
 do_install() {
     install -m 0755 -d ${D}/storage
@@ -194,4 +194,4 @@ do_install() {
     install -d ${D}/opt/share
 }
 
-FILES_${PN} = "/"
+FILES:${PN} = "/"

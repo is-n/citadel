@@ -33,4 +33,4 @@ do_install() {
     install -m 644 ${WORKDIR}/dconf-output/citadel ${D}${datadir}/factory/storage/citadel-state/citadel-dconf/user
 }
 
-FILES_${PN} = "/"
+FILES:${PN} = "/"

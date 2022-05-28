@@ -1,5 +1,5 @@
 SUMMARY = "GNOME Display Manager"
-LICENSE="GPLv2"
+LICENSE="GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=b234ee4d69f5fce4486a80fdaf4a4263"
 
 DEPENDS = " \
@@ -19,18 +19,13 @@ REQUIRED_DISTRO_FEATURES = "x11 systemd pam"
 GNOMEBASEBUILDCLASS = "meson"
 inherit gnomebase gsettings gobject-introspection gettext systemd useradd upstream-version-is-even features_check
 
-def gnome_verdir(v):
-    return oe.utils.trim_version(v, 1)
-
-SRC_URI = "${GNOME_MIRROR}/${GNOMEBN}/${@gnome_verdir("${PV}")}/${GNOMEBN}-${PV}.tar.${GNOME_COMPRESS_TYPE};name=archive"
-
 SRC_URI[archive.sha256sum] = "5738c4293a9f5a80d4a6e9e06f4d0df3e9f313ca7b61bfb4d8afaba983e200dc"
 
 SRC_URI += "file://gdm.conf"
 
-ERROR_QA_remove = "unknown-configure-option"
+GIR_MESON_OPTION = ""
 
-FILES_${PN} += " \
+FILES:${PN} += " \
     ${libdir}/systemd/system/gdm.service \
     ${libdir}/systemd/user \
     ${base_libdir}/security/pam_gdm.so \
@@ -39,7 +34,7 @@ FILES_${PN} += " \
     /run/gdm/greeter \
 "
 
-do_install_append() {
+do_install:append() {
     install -d ${D}${sysconfdir}/default/volatiles
     echo "d gdm gdm 755 ${localstatedir}/run/gdm/greeter none" > ${D}${sysconfdir}/default/volatiles/99_gdm
     rm ${D}${sysconfdir}/gdm/custom.conf
@@ -49,9 +44,9 @@ do_install_append() {
 }
 
 USERADD_PACKAGES = "${PN}"
-USERADD_PARAM_${PN} = "--system --home /var/lib/gdm -u 21 -s /bin/false --user-group gdm"
+USERADD_PARAM:${PN} = "--system --home /var/lib/gdm -u 21 -s /bin/false --user-group gdm"
 
-SYSTEMD_SERVICE_${PN} = "${BPN}.service"
+SYSTEMD_SERVICE:${PN} = "${BPN}.service"
 
 EXTRA_OEMESON = "\
     -Dplymouth=enabled \
@@ -62,4 +57,4 @@ EXTRA_OEMESON = "\
 "
 
 PACKAGES += "${PN}-help"
-FILES_${PN}-help = "${datadir}/help"
+FILES:${PN}-help = "${datadir}/help"

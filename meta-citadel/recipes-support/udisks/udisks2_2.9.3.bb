@@ -1,5 +1,5 @@
 SUMMARY = "udisks provides dbus interfaces for disks and storage devices"
-LICENSE = "GPLv2+ & LGPLv2+"
+LICENSE = "GPL-2.0-or-later & LGPL-2.0-or-later"
 LIC_FILES_CHKSUM = "file://COPYING;md5=dd79f6dbbffdbc8e86b086a8f0c0ef43"
 
 DEPENDS = " \
@@ -15,9 +15,9 @@ DEPENDS = " \
 "
 DEPENDS += "${@bb.utils.filter('DISTRO_FEATURES', 'systemd', d)}"
 
-RDEPENDS_${PN} = "acl"
+RDEPENDS:${PN} = "acl"
 
-SRC_URI = "git://github.com/storaged-project/udisks.git;branch=2.9.x-branch"
+SRC_URI = "git://github.com/storaged-project/udisks.git;branch=2.9.x-branch;protocol=https"
 SRCREV = "c430dd9a27e158693cc783e9ee91bf6e5b2a8819"
 S = "${WORKDIR}/git"
 
@@ -29,13 +29,13 @@ REQUIRED_DISTRO_FEATURES = "polkit"
 
 EXTRA_OECONF = "--disable-man --disable-gtk-doc"
 
-do_configure_prepend() {
+do_configure:prepend() {
     # | configure.ac:656: error: required file 'build-aux/config.rpath' not found
     mkdir -p ${S}/build-aux
     touch ${S}/build-aux/config.rpath
 }
 
-FILES_${PN} += " \
+FILES:${PN} += " \
     ${datadir}/dbus-1/ \
     ${datadir}/polkit-1 \
     ${datadir}/bash-completion \
@@ -46,8 +46,8 @@ FILES_${PN} += " \
 "
 
 PACKAGES =+ "${PN}-libs"
-FILES_${PN}-libs = "${libdir}/lib*${SOLIBS}"
-FILES_${PN} += "${nonarch_libdir}/tmpfiles.d"
+FILES:${PN}-libs = "${libdir}/lib*${SOLIBS}"
+FILES:${PN} += "${nonarch_libdir}/tmpfiles.d"
 
-SYSTEMD_SERVICE_${PN} = "${BPN}.service"
+SYSTEMD_SERVICE:${PN} = "${BPN}.service"
 SYSTEMD_AUTO_ENABLE = "disable"

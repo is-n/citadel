@@ -1,5 +1,5 @@
 DESCRIPTION = "UPower is an abstraction for enumerating power devices, listening to device events and querying history and statistics. "
-LICENSE = "GPLv2+"
+LICENSE = "GPL-2.0-or-later"
 LIC_FILES_CHKSUM = "file://COPYING;md5=0de8fbf1d97a140d1d93b9f14dcfbf08"
 
 DEPENDS = "intltool-native libusb1 libgudev glib-2.0 dbus-glib"
@@ -22,11 +22,11 @@ PACKAGECONFIG[systemd] = "--with-systemdutildir=${systemd_unitdir} --with-system
 
 EXTRA_OECONF = " --with-backend=linux"
 
-SYSTEMD_SERVICE_${PN} = "upower.service"
+SYSTEMD_SERVICE:${PN} = "upower.service"
 # don't start on boot by default - dbus does that on demand
 SYSTEMD_AUTO_ENABLE = "disable"
 
-do_configure_prepend() {
+do_configure:prepend() {
     touch ${S}/ABOUT-NLS
     mkdir -p ${S}/build-aux
     touch ${S}/build-aux/config.rpath
@@ -35,8 +35,8 @@ do_configure_prepend() {
     #sed -i -e 's: doc : :g' ${S}/Makefile.am
 }
 
-RDEPENDS_${PN} += "dbus"
-RRECOMMENDS_${PN} += "pm-utils"
-FILES_${PN} += "${datadir}/dbus-1/ \
+RDEPENDS:${PN} += "dbus"
+RRECOMMENDS:${PN} += "pm-utils"
+FILES:${PN} += "${datadir}/dbus-1/ \
                 ${base_libdir}/udev/* \
 "

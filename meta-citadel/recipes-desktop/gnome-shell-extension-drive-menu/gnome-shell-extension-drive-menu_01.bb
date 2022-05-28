@@ -1,18 +1,18 @@
-LICENSE = "GPLv2"
+LICENSE = "GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=4cb3a392cbf81a9e685ec13b88c4c101"
 
-SRC_URI = "git://github.com/subgraph/gnome-shell-extension-drive-menu.git;protocol=https"
+SRC_URI = "git://github.com/subgraph/gnome-shell-extension-drive-menu.git;protocol=https;branch=master"
 SRCREV="45bbb0e9fe87f1f44d3eec49f31a1efa835f4f6b"
 S = "${WORKDIR}/git"
 
 DEPENDS = "gettext-native glib-2.0-native ninja-native"
-FILES_${PN} = "${datadir}/gnome-shell/extensions"
+FILES:${PN} = "${datadir}/gnome-shell/extensions"
 
 EXTRA_OEMESON += "--prefix=${D}/usr"
 
 inherit meson
 
-do_configure_prepend () {
+do_configure:prepend () {
 	cd ${S}
 	./meson-gse/meson-gse
 }

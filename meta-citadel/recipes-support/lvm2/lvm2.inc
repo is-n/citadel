@@ -1,7 +1,7 @@
 HOMEPAGE = "https://www.sourceware.org/lvm2/"
 SECTION = "utils"
 DESCRIPTION = "LVM2 is a set of utilities to manage logical volumes in Linux."
-LICENSE = "GPLv2 & LGPLv2.1"
+LICENSE = "GPL-2.0-only & LGPL-2.1-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=12713b4d9386533feeb07d6e4831765a \
                     file://COPYING.LIB;md5=fbc093901857fcd118f065f900982c24"
 
@@ -24,7 +24,7 @@ S = "${WORKDIR}/git"
 inherit autotools-brokensep pkgconfig systemd
 
 LVM2_PACKAGECONFIG = "dmeventd"
-LVM2_PACKAGECONFIG_append_class-target = " \
+LVM2_PACKAGECONFIG:append:class-target = " \
     ${@bb.utils.filter('DISTRO_FEATURES', 'selinux', d)} \
 "
 

@@ -4,7 +4,7 @@ inherit meson pkgconfig
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://LICENSE;md5=b53d9ec16b9125995437ac9efab1b450"
 
-SRC_URI = "git://github.com/swaywm/swaybg;protocol=https"
+SRC_URI = "git://github.com/swaywm/swaybg;protocol=https;branch=master"
 PV = "1.0+git${SRCPV}"
 PR = "r0"
 
@@ -16,4 +16,5 @@ S = "${WORKDIR}/git"
 
 DEPENDS = "wayland wayland-native wayland-protocols cairo gdk-pixbuf"
 
-
+# Reproducibility issue. Fix me!
+CFLAGS:append = " -Wno-error=date-time"

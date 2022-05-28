@@ -4,7 +4,7 @@ inherit meson pkgconfig
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://LICENSE;md5=e316e9609dd7672b87ff25b46b2cf3e1"
 
-SRC_URI = "git://github.com/emersion/grim;protocol=https"
+SRC_URI = "git://github.com/emersion/grim;protocol=https;branch=master"
 
 UPSTREAM_CHECK_COMMITS = "1" 
 

@@ -2,6 +2,7 @@
 # Base set of packages, should not include anything needed only on desktop
 #
 
+PACKAGE_ARCH = "${MACHINE_ARCH}"
 inherit packagegroup
 
 BASH_COMPLETION = "\
@@ -13,7 +14,7 @@ BASH_COMPLETION = "\
     util-linux-bash-completion \
 "
 
-RDEPENDS_${PN} = "\
+RDEPENDS:${PN} = "\
     keyutils \
     citadel-config \
     base-files \

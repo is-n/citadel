@@ -17,4 +17,4 @@ do_install() {
     install -m 0644 ${WORKDIR}/citadel-documentation.desktop ${D}${datadir}/applications
 }
 
-FILES_${PN} = "/"
+FILES:${PN} = "/"

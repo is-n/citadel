@@ -6,7 +6,7 @@ SRCREV = "ab77efc6caba50acc4c87e02ae3e6712ea808772"
 PV = "1.4+git${SRCPV}"
 
 S = "${WORKDIR}/git"
-SRC_URI = "git://github.com/swaywm/sway;protocol=https \
+SRC_URI = "git://github.com/swaywm/sway;protocol=https;branch=master \
            file://config \
            "
 
@@ -16,11 +16,11 @@ inherit meson
 
 DEPENDS = "dbus cairo pango wlroots libinput libxkbcommon wayland wayland-native libpam libcap json-c libpcre gdk-pixbuf"
 
-FILES_${PN} += "\
+FILES:${PN} += "\
 	${datadir}/wayland-sessions/sway.desktop \
 "
 
-do_install_append() {
+do_install:append() {
     rm ${D}${sysconfdir}/sway/config
     install -m 644 ${WORKDIR}/config ${D}${sysconfdir}/sway/config
 }

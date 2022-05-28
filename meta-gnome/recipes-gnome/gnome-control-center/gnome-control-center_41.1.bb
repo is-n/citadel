@@ -1,6 +1,6 @@
 SUMMARY = "GNOME Settings"
 DESCRIPTION = "GNOME Settings is GNOME's main interface for configuration of various aspects of your desktop"
-LICENSE = "GPLv2"
+LICENSE = "GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=75859989545e37968a99b631ef42722e"
 
 GNOMEBASEBUILDCLASS = "meson"
@@ -71,14 +71,14 @@ SRC_URI[archive.sha256sum] = "ea0c71484c65ce2cc11376f9b01e6211fa4a7ffd334f4307fc
 
 SRC_URI += " file://0001-Add-options-for-Citadel-and-disabling-GOA-CUPS.patch"
 
-FILES_${PN} += " \
+FILES:${PN} += " \
     ${datadir}/dbus-1 \
     ${datadir}/gnome-shell \
     ${datadir}/metainfo \
 "
 
-FILES_${PN}-dev += "${datadir}/gettext"
+FILES:${PN}-dev += "${datadir}/gettext"
 
-RDEPENDS_${PN} += "gsettings-desktop-schemas"
+RDEPENDS:${PN} += "gsettings-desktop-schemas"
 EXTRA_OEMESON = "--buildtype=release -Dcheese=false -Ddocumentation=false -Dstaging_dir=${STAGING_DIR_TARGET}"
 

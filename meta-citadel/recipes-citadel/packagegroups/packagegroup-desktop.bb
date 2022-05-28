@@ -2,13 +2,14 @@
 # Packages common to any desktop environment
 #
 
+PACKAGE_ARCH = "${MACHINE_ARCH}"
 inherit packagegroup
 
 CITADEL_POWERTOP = ""
 # append only if citadel-powertop override is set
-CITADEL_POWERTOP_append_citadel-powertop= "powertop"
+CITADEL_POWERTOP:append:citadel-powertop= "powertop"
 
-RDEPENDS_${PN} = "\
+RDEPENDS:${PN} = "\
     ${CITADEL_POWERTOP} \
     accountsservice \
     upower \
@@ -25,7 +26,6 @@ RDEPENDS_${PN} = "\
     wireless-regdb \
     polkit \
     network-manager-applet \
-    clutter-1.0 \
     libxkbcommon \
     xkeyboard-config \
     libusb1 \

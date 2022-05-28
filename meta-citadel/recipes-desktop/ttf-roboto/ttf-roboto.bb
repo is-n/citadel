@@ -11,7 +11,7 @@ inherit allarch fontcache
 
 S = "${WORKDIR}/roboto-hinted"
 
-FILES_${PN} = "${datadir}/fonts/TTF"
+FILES:${PN} = "${datadir}/fonts/TTF"
 
 do_install () {
     install -Dm644 ${S}/*.ttf -t ${D}${datadir}/fonts/TTF

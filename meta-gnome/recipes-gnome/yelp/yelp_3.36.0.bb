@@ -1,5 +1,5 @@
 SUMMARY = "Help browser for the GNOME desktop"
-LICENSE = "GPLv2"
+LICENSE = "GPL-2.0-only"
 LIC_FILES_CHKSUM = " \
     file://COPYING;md5=6e1b9cb787e76d7e6946887a65caa754 \
 "
@@ -23,13 +23,13 @@ DEPENDS += " \
     yelp-xsl \
 "
 
-do_configure_prepend() {
+do_configure:prepend() {
     export ITSTOOL=${STAGING_BINDIR_NATIVE}/itstool
 }
 
-FILES_${PN} += " \
+FILES:${PN} += " \
     ${datadir}/metainfo \
     ${datadir}/yelp-xsl \
 "
 
-RDEPENDS_${PN} += "yelp-xsl"
+RDEPENDS:${PN} += "yelp-xsl"

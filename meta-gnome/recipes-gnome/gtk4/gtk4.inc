@@ -8,7 +8,7 @@ SECTION = "libs"
 DEPENDS = "glib-2.0 cairo pango atk jpeg libpng gdk-pixbuf libepoxy graphene libxcursor libxinerama libxi sassc-native \
            gdk-pixbuf-native wayland wayland-protocols libxkbcommon virtual/egl virtual/libgles2 wayland-native"
 
-LICENSE = "LGPLv2 & LGPLv2+ & LGPLv2.1+"
+LICENSE = "LGPL-2.0-only & LGPL-2.0-or-later & LGPL-2.1-or-later"
 
 
 GNOMEBASEBUILDCLASS = "meson"
@@ -27,7 +27,7 @@ ANY_OF_DISTRO_FEATURES = "${GTK3DISTROFEATURES}"
 # it here avoids rebuilding everything.
 export PKG_CONFIG_FOR_BUILD = "${STAGING_BINDIR_NATIVE}/pkg-config-native"
 
-do_configure_prepend() {
+do_configure:prepend() {
     # Do this because the configure script is running ./libtool directly
     rm -f libtool
     ln -s ${TARGET_PREFIX}libtool libtool
@@ -40,25 +40,25 @@ EXTRA_OEMESON += " \
     -Dmedia-gstreamer=disabled \
 "
 
-do_compile_prepend() {
+do_compile:prepend() {
         export GIR_EXTRA_LIBS_PATH="${B}/gdk/.libs"
 }
 
 LIBV = "4.0.0"
 
 
-FILES_${PN}_append = " ${datadir}/gtk-4.0/emoji "
+FILES:${PN}:append = " ${datadir}/gtk-4.0/emoji "
 
-FILES_${PN}-dev += "\
+FILES:${PN}-dev += "\
         ${datadir}/gtk-4.0/valgrind \
         ${datadir}/gtk-4.0/gtk4builder.rng \
         ${datadir}/gettext/its \
 "
 
-RDEPENDS_${PN}-dev += "${@bb.utils.contains("PACKAGECONFIG", "wayland", "wayland-protocols", "", d)}"
+RDEPENDS:${PN}-dev += "${@bb.utils.contains("PACKAGECONFIG", "wayland", "wayland-protocols", "", d)}"
 
 
-python populate_packages_prepend () {
+python populate_packages:prepend () {
     import os.path
 
     gtk_libdir = d.expand('${libdir}/gtk-4.0/${LIBV}')

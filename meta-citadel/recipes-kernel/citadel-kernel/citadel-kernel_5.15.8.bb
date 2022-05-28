@@ -1,5 +1,5 @@
 DESCRIPTION = "Citadel linux kernel"
-LICENSE = "GPLv2"
+LICENSE = "GPL-2.0-only"
 SECTION = "kernel"
 LIC_FILES_CHKSUM = "file://COPYING;md5=6bc538ed5bd9a7fc9398086aedcd7e46"
 
@@ -18,7 +18,7 @@ KERNEL_CONFIG_COMMAND = "oe_runmake_call -C ${S} CC="${KERNEL_CC}" O=${B} olddef
 
 DEPENDS += "lz4-native"
 
-do_deploy_append() {
+do_deploy:append() {
     rm ${DEPLOYDIR}/bzImage
     ln -sf bzImage-initramfs-${KERNEL_IMAGE_NAME}.bin ${DEPLOYDIR}/bzImage
     echo "${PV}" > ${DEPLOYDIR}/kernel.version
@@ -40,5 +40,5 @@ copy_initramfs() {
 }
 
 # Don't install kernel into images, see kernel.bbclass
-RDEPENDS_${KERNEL_PACKAGE_NAME}-base = ""
+RDEPENDS:${KERNEL_PACKAGE_NAME}-base = ""
 

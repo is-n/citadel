@@ -1,6 +1,6 @@
 SUMMARY = "Library providing high-level API for X Keyboard Extension"
 HOMEPAGE = "https://www.freedesktop.org/wiki/Software/LibXklavier"
-LICENSE = "GPLv2"
+LICENSE = "GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://COPYING.LIB;md5=6e29c688d912da12b66b73e32b03d812"
 
 SRC_URI = "https://people.freedesktop.org/~svu/libxklavier-${PV}.tar.bz2"

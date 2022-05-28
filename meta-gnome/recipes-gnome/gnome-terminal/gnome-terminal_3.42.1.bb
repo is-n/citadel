@@ -1,6 +1,6 @@
 SUMMARY = "GNOME terminal emulator"
 HOMEPAGE = "https://wiki.gnome.org/Apps/Terminal"
-LICENSE = "GPLv3"
+LICENSE = "GPL-3.0-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=f27defe1e96c2e1ecd4e0c9be8967949"
 
 DEPENDS = " \
@@ -23,13 +23,13 @@ SRC_URI[archive.sha256sum] = "c319b1405501b8c7693e616f48eced41695d2e786148ca5f9e
 
 EXTRA_OEMESON = "-Ddocs=false -Dnautilus_extension=false -Dsearch_provider=false"
 
-FILES_${PN} += "\
+FILES:${PN} += "\
     ${systemd_user_unitdir} \
     ${datadir}/dbus-1/services \
     ${datadir}/glib-2.0/schemas \
     ${datadir}/metainfo \
 "
 
-FILES_${PN}-doc += "\
+FILES:${PN}-doc += "\
     ${datadir}/help \
 "

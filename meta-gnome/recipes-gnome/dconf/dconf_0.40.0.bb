@@ -1,5 +1,5 @@
 SUMMARY = "configuation database system"
-LICENSE = "LGPLv2.1"
+LICENSE = "LGPL-2.1-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=2d5025d4aa3495befef8f17206a5b0a1"
 SECTION = "x11/gnome"
 
@@ -13,12 +13,12 @@ inherit gnomebase bash-completion vala
 
 SRC_URI += "file://0001-meson.build-do-not-compile-docs.patch"
 
-FILES_${PN} += " \
+FILES:${PN} += " \
     ${systemd_user_unitdir} \
     ${datadir}/dbus-1 \
     ${libdir}/gio/modules/*.so \
 "
 
-EXTRA_OEMESON_append_class-native = "-Dbash_completion=false"
+EXTRA_OEMESON:append:class-native = "-Dbash_completion=false"
 
 BBCLASSEXTEND= "native"

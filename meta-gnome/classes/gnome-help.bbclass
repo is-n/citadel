@@ -10,11 +10,11 @@
 #       pack all help files to ${PN}-help-<lingua>
 
 # Dummy to get yelp build & PACKAGE_NO_HELP_SPLIT set 1
-PACKAGES_append = " ${PN}-help"
-FILES_${PN}-help = "${datadir}/help"
-RRECOMMENDS_${PN}-help = "${@bb.utils.contains('DISTRO_FEATURES','helpfiles','yelp','',d)}"
+PACKAGES:append = " ${PN}-help"
+FILES:${PN}-help = "${datadir}/help"
+RRECOMMENDS:${PN}-help = "${@bb.utils.contains('DISTRO_FEATURES','helpfiles','yelp','',d)}"
 
-do_install_append() {
+do_install:append() {
     if ${@bb.utils.contains('DISTRO_FEATURES','helpfiles','false','true',d)}; then
         rm -rf ${D}${datadir}/help/*
     fi
@@ -63,5 +63,5 @@ python gnome_do_split_help() {
     d.setVar('PACKAGES', ' '.join(packages))
 }
 
-PACKAGESPLITFUNCS_prepend = "gnome_do_split_help "
+PACKAGESPLITFUNCS:prepend = "gnome_do_split_help "
 

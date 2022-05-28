@@ -1,1 +1,1 @@
-PACKAGECONFIG_append = " user-session"
+PACKAGECONFIG:append = " user-session"

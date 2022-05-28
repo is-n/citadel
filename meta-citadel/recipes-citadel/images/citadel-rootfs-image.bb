@@ -32,11 +32,9 @@ set_disable_root_password() {
 
 setup_var() {
     install -m 0755 -d ${IMAGE_ROOTFS}/usr/share/factory/var
-
-    rmdir ${IMAGE_ROOTFS}/var/log/journal
+    install -m 0755 -d ${IMAGE_ROOTFS}/usr/share/factory/var/log
 
     mv ${IMAGE_ROOTFS}/var/lib ${IMAGE_ROOTFS}/usr/share/factory/var
-    mv ${IMAGE_ROOTFS}/var/log ${IMAGE_ROOTFS}/usr/share/factory/var
     mv ${IMAGE_ROOTFS}/var/cache  ${IMAGE_ROOTFS}/usr/share/factory/var
     mv ${IMAGE_ROOTFS}/var/spool ${IMAGE_ROOTFS}/usr/share/factory/var
     mv ${IMAGE_ROOTFS}/var/run ${IMAGE_ROOTFS}/usr/share/factory/var

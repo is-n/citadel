@@ -1,1 +1,1 @@
-EXTRA_OECONF_append = " --disable-raw"
+EXTRA_OECONF:append = " --disable-raw"

@@ -1,7 +1,7 @@
 SUMMARY = "C++ bindings for the atk"
 SECTION = "libs"
 
-LICENSE = "LGPLv2.1 & GPLv2"
+LICENSE = "LGPL-2.1-only & GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=2d5025d4aa3495befef8f17206a5b0a1 \
                     file://COPYING.tools;md5=751419260aa954499f7abaabaa882bbe"
 
@@ -16,4 +16,4 @@ SRC_URI[archive.sha256sum] = "4c4cfc917fd42d3879ce997b463428d6982affa0fb660cafcc
 
 EXTRA_OECONF = " --disable-documentation "
 
-FILES_${PN}-dev += "${libdir}/*/include ${libdir}/*/proc/m4"
+FILES:${PN}-dev += "${libdir}/*/include ${libdir}/*/proc/m4"

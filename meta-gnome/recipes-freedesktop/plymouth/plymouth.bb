@@ -8,14 +8,14 @@ DESCRIPTION = "Plymouth is an application that runs very early in the boot proce
 HOMEPAGE = "http://www.freedesktop.org/wiki/Software/Plymouth"
 SECTION = "base"
 
-LICENSE = "GPLv2+"
+LICENSE = "GPL-2.0-or-later"
 
 LIC_FILES_CHKSUM = "file://COPYING;md5=94d55d512a9ba36caa9b7df079bae19f"
 
 DEPENDS = "libcap libpng cairo dbus udev"
-DEPENDS_append_libc-musl = " musl-rpmatch"
+DEPENDS:append:libc-musl = " musl-rpmatch"
 PROVIDES = "virtual/psplash"
-RPROVIDES_${PN} = "virtual-psplash virtual-psplash-support"
+RPROVIDES:${PN} = "virtual-psplash virtual-psplash-support"
 
 SRCREV = "e55447500fa95a0cc59c741296030ed91a2986dc"
 SRC_URI = " \
@@ -31,8 +31,8 @@ EXTRA_OECONF += " --enable-shared --disable-static --disable-gtk --disable-docum
 "
 
 PACKAGECONFIG ??= "pango initrd"
-PACKAGECONFIG_append_x86 = " drm"
-PACKAGECONFIG_append_x86-64 = " drm"
+PACKAGECONFIG:append:x86 = " drm"
+PACKAGECONFIG:append:x86-64 = " drm"
 
 PACKAGECONFIG[drm] = "--enable-drm,--disable-drm,libdrm"
 PACKAGECONFIG[pango] = "--enable-pango,--disable-pango,pango"
@@ -43,9 +43,9 @@ LOGO ??= "${datadir}/plymouth/bizcom.png"
 
 inherit autotools pkgconfig systemd gettext
 
-LDFLAGS_append_libc-musl = " -lrpmatch"
+LDFLAGS:append:libc-musl = " -lrpmatch"
 
-do_install_append() {
+do_install:append() {
     # Remove /var/run from package as plymouth will populate it on startup
     rm -fr "${D}${localstatedir}/run"
 
@@ -54,7 +54,7 @@ do_install_append() {
     fi
 }
 
-do_configure_prepend() {
+do_configure:prepend() {
     touch ${S}/ABOUT-NLS
     mkdir -p ${S}/build-tools
     touch ${S}/build-tools/config.rpath
@@ -63,15 +63,15 @@ do_configure_prepend() {
 PACKAGES =. "${@bb.utils.contains('PACKAGECONFIG', 'initrd', '${PN}-initrd ', '', d)}"
 PACKAGES =+ "${PN}-set-default-theme"
 
-FILES_${PN}-initrd = "${libexecdir}/plymouth/*"
-FILES_${PN}-set-default-theme = "${sbindir}/plymouth-set-default-theme"
+FILES:${PN}-initrd = "${libexecdir}/plymouth/*"
+FILES:${PN}-set-default-theme = "${sbindir}/plymouth-set-default-theme"
 
-FILES_${PN} += "${systemd_unitdir}/system/*"
-FILES_${PN}-dbg += "${libdir}/plymouth/renderers/.debug"
+FILES:${PN} += "${systemd_unitdir}/system/*"
+FILES:${PN}-dbg += "${libdir}/plymouth/renderers/.debug"
 
 
-RDEPENDS_${PN}-initrd = "bash dracut"
-RDEPENDS_${PN}-set-default-theme = "bash"
+RDEPENDS:${PN}-initrd = "bash dracut"
+RDEPENDS:${PN}-set-default-theme = "bash"
 
-SYSTEMD_SERVICE_${PN} = "plymouth-start.service"
+SYSTEMD_SERVICE:${PN} = "plymouth-start.service"
 

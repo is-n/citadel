@@ -1,1 +1,1 @@
-GALLIUMDRIVERS_append = ",iris"
+GALLIUMDRIVERS:append = ",iris"

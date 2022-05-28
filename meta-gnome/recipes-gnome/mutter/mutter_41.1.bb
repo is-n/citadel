@@ -1,5 +1,5 @@
 SUMMARY = "Window and compositing manager based on Clutter"
-LICENSE = "GPLv2"
+LICENSE = "GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=b234ee4d69f5fce4486a80fdaf4a4263"
 
 DEPENDS = " \
@@ -14,7 +14,7 @@ DEPENDS = " \
     libcanberra \
     mesa \
     upower \
-    xserver-xorg \
+    xwayland \
     gtk+3 \
     gdk-pixbuf \
     cairo \
@@ -35,7 +35,7 @@ DEPENDS = " \
     gobject-introspection-native \
 "
 
-RDEPENDS_${PN} += " xserver-xorg-xwayland zenity"
+RDEPENDS:${PN} += " xwayland zenity"
 
 SRCREV = "7cab502754edef977215bdfc9f8dfa0849a426f3"
 
@@ -67,7 +67,7 @@ EXTRA_OEMESON += " \
 
 MUTTER_API_NAME = "mutter-9"
 
-do_install_append() {
+do_install:append() {
     # Add gir links in standard paths. That makes dependents life much easier
     # to find them
     install -d ${D}${datadir}/gir-1.0
@@ -79,20 +79,20 @@ do_install_append() {
 
 PACKAGES =+ "${PN}-tests"
 
-FILES_${PN} += " \
+FILES:${PN} += " \
     ${datadir}/gnome-control-center \
     ${libdir}/${MUTTER_API_NAME}/lib*${SOLIBS} \
     ${libdir}/${MUTTER_API_NAME}/*.typelib \
     ${libdir}/${MUTTER_API_NAME}/plugins \
 "
 
-FILES_${PN}-tests += " \
+FILES:${PN}-tests += " \
     ${datadir}/installed-tests \
     ${datadir}/${MUTTER_API_NAME}/tests \
     ${libexecdir}/installed-tests/${MUTTER_API_NAME} \
 "
 
-FILES_${PN}-dev += " \
+FILES:${PN}-dev += " \
     ${libdir}/${MUTTER_API_NAME}/*.gir \
     ${libdir}/${MUTTER_API_NAME}/lib*.so \
 "

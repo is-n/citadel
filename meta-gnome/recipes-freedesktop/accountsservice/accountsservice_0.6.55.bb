@@ -1,7 +1,7 @@
 SUMMARY = "D-Bus service for accessing the list of user accounts and information attached to those accounts."
 HOMEPAGE = "https://www.freedesktop.org/wiki/Software/AccountsService"
 
-LICENSE = "GPLv3"
+LICENSE = "GPL-3.0-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=d32239bcb673463ab874e80d47fae504"
 
 SRC_URI = "https://www.freedesktop.org/software/accountsservice/accountsservice-${PV}.tar.xz"
@@ -12,7 +12,7 @@ DEPENDS = "glib-2.0 intltool-native polkit systemd glib-2.0-native dbus"
 
 inherit meson pkgconfig gettext gobject-introspection
 
-FILES_${PN} += "\
+FILES:${PN} += "\
     ${datadir}/dbus-1/interfaces/*.xml \
     ${datadir}/dbus-1/system-services/org.freedesktop.Accounts.service \
     ${datadir}/polkit-1/actions/org.freedesktop.accounts.policy \

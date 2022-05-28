@@ -48,9 +48,9 @@ do_install() {
     mknod -m 644 ${D}/dev/loop0 b 7 0
 }
 
-FILES_${PN} += "/dev/console /boot /dev /usr /etc /proc /run /sys /tmp"
+FILES:${PN} += "/dev/console /boot /dev /usr /etc /proc /run /sys /tmp"
 
-pkg_postinst_${PN}() {
+pkg_postinst:${PN}() {
     ln -sf initrd-release $D${sysconfdir}/os-release
     ln -sf ${systemd_system_unitdir}/initrd.target $D${systemd_system_unitdir}/default.target
     > $D${sysconfdir}/fstab

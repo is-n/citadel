@@ -1,4 +1,4 @@
 
 inherit packagegroup
 
-RDEPENDS_${PN} = "ttf-roboto"
+RDEPENDS:${PN} = "ttf-roboto"

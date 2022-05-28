@@ -1,9 +1,9 @@
 SUMMARY = "Library for IPv6 Neighbor Discovery Protocol"
 HOMEPAGE = "http://libndp.org/"
-LICENSE = "LGPLv2.1"
+LICENSE = "LGPL-2.1-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=4fbd65380cdd255951079008b364516c"
 
-SRC_URI = "git://github.com/jpirko/libndp \
+SRC_URI = "git://github.com/jpirko/libndp;branch=master;protocol=https \
            file://0001-include-sys-select.h-for-fd_-definitions.patch \
            "
 # tag for v1.6

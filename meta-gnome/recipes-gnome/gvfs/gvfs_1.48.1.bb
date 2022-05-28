@@ -1,5 +1,5 @@
 DESCRIPTION = "gvfs is a userspace virtual filesystem"
-LICENSE = "LGPLv2"
+LICENSE = "LGPL-2.0-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=05df38dd77c35ec8431f212410a3329e"
 
 GNOMEBASEBUILDCLASS = "meson"
@@ -33,7 +33,7 @@ EXTRA_OEMESON = " \
     -Dudisks2=true \
 "
 
-FILES_${PN} += " \
+FILES:${PN} += " \
     ${datadir}/glib-2.0 \
     ${datadir}/GConf \
     ${datadir}/dbus-1/services \
@@ -42,17 +42,17 @@ FILES_${PN} += " \
     ${systemd_user_unitdir} \
 "
 
-RDEPENDS_${PN} = "udisks2"
+RDEPENDS:${PN} = "udisks2"
 
-FILES_${PN}-dbg += "${libdir}/gio/modules/.debug/*"
-FILES_${PN}-dev += "${libdir}/gio/modules/*.la"
+FILES:${PN}-dbg += "${libdir}/gio/modules/.debug/*"
+FILES:${PN}-dev += "${libdir}/gio/modules/*.la"
 
 PACKAGECONFIG[systemd] = "-Dsystemduserunitdir=${systemd_user_unitdir} -Dtmpfilesdir=${libdir}/tmpfiles.d, -Dsystemduserunitdir=no -Dtmpfilesdir=no, systemd"
 
 # needs meta-filesystems
 PACKAGECONFIG[fuse] = "-Dfuse=true, -Dfuse=false, fuse"
 
-do_install_append() {
+do_install:append() {
 
     # After rebuilds (not from scracth) it can happen that the executables in
     # libexec ar missing executable permission flag. Not sure but it came up

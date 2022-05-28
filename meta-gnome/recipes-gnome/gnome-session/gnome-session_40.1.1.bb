@@ -1,5 +1,5 @@
 SUMMARY = "GNOME session"
-LICENSE = "GPLv2"
+LICENSE = "GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=b234ee4d69f5fce4486a80fdaf4a4263"
 
 DEPENDS = " \
@@ -34,7 +34,7 @@ SRC_URI += " \
 "
 
 EXTRA_OEMESON += "-Dsystemd=true -Dsystemd_journal=true -Ddocbook=false -Dman=false"
-FILES_${PN} += " \
+FILES:${PN} += " \
     ${bindir}/gnome-session \
     ${libexecdir}/gnome-session-ctl \
     ${datadir}/xsessions \
@@ -42,4 +42,4 @@ FILES_${PN} += " \
     ${systemd_user_unitdir} \
 "
 
-RDEPENDS_${PN} += "gnome-shell gnome-settings-daemon gsettings-desktop-schemas"
+RDEPENDS:${PN} += "gnome-shell gnome-settings-daemon gsettings-desktop-schemas"

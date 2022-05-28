@@ -5,10 +5,10 @@ LIC_FILES_CHKSUM = "file://LICENSE.md;md5=e6faad78a557b22780e4cf62c89976f8"
 SECTION = ""
 DEPENDS = ""
 
-SRC_URI = "git://github.com/chriskempson/base16-vim;protocol=https"
+SRC_URI = "git://github.com/chriskempson/base16-vim;protocol=https;branch=master"
 SRCREV = "6191622d5806d4448fa2285047936bdcee57a098"
 
-FILES_${PN} = "${datadir}/vim/colors"
+FILES:${PN} = "${datadir}/vim/colors"
 S = "${WORKDIR}/git"
 
 inherit allarch

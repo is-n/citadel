@@ -1,7 +1,8 @@
 
+PACKAGE_ARCH = "${MACHINE_ARCH}"
 inherit packagegroup
 
-RDEPENDS_${PN} = "\
+RDEPENDS:${PN} = "\
     atk \
     at-spi2-atk \
     libgweather \

@@ -1,1 +1,1 @@
-FILESEXTRAPATHS_prepend := "${THISDIR}/iptables:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/iptables:"

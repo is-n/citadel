@@ -6,25 +6,28 @@ SRCREV = "5ae4f65045c04df7ad2d87142b4064803d97a73e"
 #PV = "1.4+git${SRCPV}"
 
 S = "${WORKDIR}/git"
-SRC_URI = "git://github.com/swaywm/sway;protocol=https \
+SRC_URI = "git://github.com/swaywm/sway;protocol=https;branch=master \
            file://config \
            file://0001-Reinstate-wayland-0-as-starting-display-socket-for-C.patch \
            "
 
 UPSTREAM_CHECK_COMMITS = "1"
 
-inherit meson 
+inherit meson pkgconfig
 
 DEPENDS = "dbus cairo pango wlroots libinput libxkbcommon wayland wayland-native libpam libcap json-c libpcre gdk-pixbuf"
 
-FILES_${PN} += "\
+FILES:${PN} += "\
 	${datadir}/wayland-sessions/sway.desktop \
 "
 
-do_install_append() {
+do_install:append() {
     rm ${D}${sysconfdir}/sway/config
     install -m 644 ${WORKDIR}/config ${D}${sysconfdir}/sway/config
 }
+
+# Reproducibility issue. Fix me!
+CFLAGS:append = " -Wno-error=date-time"
 
 EXTRA_OEMESON += "-Ddefault-wallpaper=false -Dzsh-completions=false -Dbash-completions=false -Dfish-completions=false" 
 

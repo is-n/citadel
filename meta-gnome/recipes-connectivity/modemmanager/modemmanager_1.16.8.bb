@@ -1,7 +1,7 @@
 SUMMARY = "ModemManager is a daemon controlling broadband devices/connections"
 DESCRIPTION = "ModemManager is a DBus-activated daemon which controls mobile broadband (2G/3G/4G) devices and connections"
 HOMEPAGE = "http://www.freedesktop.org/wiki/Software/ModemManager/"
-LICENSE = "GPL-2.0 & LGPL-2.1"
+LICENSE = "GPL-2.0-only & LGPL-2.1-only"
 LIC_FILES_CHKSUM = " \
     file://COPYING;md5=b234ee4d69f5fce4486a80fdaf4a4263 \
     file://COPYING.LIB;md5=4fbd65380cdd255951079008b364516c \
@@ -31,7 +31,7 @@ EXTRA_OECONF = " \
     --with-udev-base-dir=${nonarch_base_libdir}/udev \
 "
 
-FILES_${PN} += " \
+FILES:${PN} += " \
     ${datadir}/icons \
     ${datadir}/polkit-1 \
     ${datadir}/dbus-1 \
@@ -40,14 +40,14 @@ FILES_${PN} += " \
     ${systemd_unitdir}/system \
 "
 
-FILES_${PN}-dev += " \
+FILES:${PN}-dev += " \
     ${libdir}/ModemManager/*.la \
 "
 
-FILES_${PN}-staticdev += " \
+FILES:${PN}-staticdev += " \
     ${libdir}/ModemManager/*.a \
 "
 
-FILES_${PN}-dbg += "${libdir}/ModemManager/.debug"
+FILES:${PN}-dbg += "${libdir}/ModemManager/.debug"
 
-SYSTEMD_SERVICE_${PN} = "ModemManager.service"
+SYSTEMD_SERVICE:${PN} = "ModemManager.service"

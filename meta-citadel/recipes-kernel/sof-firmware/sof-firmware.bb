@@ -3,7 +3,7 @@ HOMEPAGE = "https://github.com/thesofproject"
 SECTION = "kernel"
 
 SRCREV = "082fb0673f8488717c431801e4bc061d0dc2051c"
-SRC_URI = "git://github.com/thesofproject/sof-bin.git;branch=main;protocol=git;destsuffix=sof-firmware"
+SRC_URI = "git://github.com/thesofproject/sof-bin.git;branch=main;protocol=https;destsuffix=sof-firmware"
 
 S = "${WORKDIR}"
 
@@ -12,7 +12,7 @@ LIC_FILES_CHKSUM = "file://sof-firmware/LICENCE.Intel;md5=54b4f1a2dd35fd85bc7a1d
 
 PV = "1.9"
 
-FILES_${PN} += "/usr/lib/firmware/intel/*"
+FILES:${PN} += "/usr/lib/firmware/intel/*"
 
 inherit allarch update-alternatives
 

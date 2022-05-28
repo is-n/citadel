@@ -1,8 +1,8 @@
 
-DEPENDS_append = " citadel-tools-native mtools-native cryptsetup-native coreutils-native"
+DEPENDS:append = " citadel-tools-native mtools-native cryptsetup-native coreutils-native"
 
 # Block size must be 4096 or dm-verity won't work
-EXTRA_IMAGECMD_ext4 = "-i 4096 -b 4096"
+EXTRA_IMAGECMD:ext4 = "-i 4096 -b 4096"
 IMAGE_FSTYPES = "ext4"
 IMAGE_OVERHEAD_FACTOR = "1.2"
 
@@ -41,7 +41,9 @@ do_citadel_mkimage[vardepsexclude] = "DATETIME"
 
 IMAGE_POSTPROCESS_COMMAND += " generate_shasum_buildhistory ;"
 
+BUILDHISTORY_CURRENT_IMAGE_DIR = "${TOPDIR}/buildhistory/images/${MACHINE_ARCH}/${TCLIBC}/${IMAGE_BASENAME}"
+
 generate_shasum_buildhistory() {
-    mkdir -p ${BUILDHISTORY_DIR_IMAGE}
-    ( cd ${IMAGE_ROOTFS} && find . -type f -exec sha1sum '{}' \; | sort -k2 > ${BUILDHISTORY_DIR_IMAGE}/image-shasums.txt )
+    mkdir -p ${BUILDHISTORY_CURRENT_IMAGE_DIR}
+    ( cd ${IMAGE_ROOTFS} && find . -type f -exec sha1sum '{}' \; | sort -k2 > ${BUILDHISTORY_CURRENT_IMAGE_DIR}/image-shasums.txt )
 }

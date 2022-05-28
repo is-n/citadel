@@ -1,6 +1,6 @@
 SUMMARY = "Intelligent Input Bus for Linux/Unix"
 HOMEPAGE = "https://github.com/ibus/ibus/wiki"
-LICENSE = "LGPLv2.1"
+LICENSE = "LGPL-2.1-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=fbc093901857fcd118f065f900982c24"
 
 inherit autotools-brokensep pkgconfig gobject-introspection gettext gtk-doc vala
@@ -10,7 +10,7 @@ PV = "1.5.23+git${SRCPV}"
 DEPENDS = "unicode-ucd"
 
 SRC_URI = " \
-    git://github.com/ibus/ibus.git \
+    git://github.com/ibus/ibus.git;branch=master;protocol=https \
     file://0001-Do-not-try-to-start-dbus-we-do-not-have-dbus-lauch.patch \
 "
 SRCREV = "dd4cc5b028c35f9bb8fa9d3bdc8f26bcdfc43d40"
@@ -30,7 +30,7 @@ EXTRA_OECONF = " \
     --disable-python2 \
 "
 
-do_configure_prepend() {
+do_configure:prepend() {
     touch ${S}/ChangeLog
     touch ${S}/ABOUT-NLS
 }

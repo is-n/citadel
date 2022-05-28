@@ -8,8 +8,6 @@ BBFILES ?= ""
 BBLAYERS ?= " \
   ##OEROOT##/meta \
   ##OEROOT##/../meta-intel \
-  ##OEROOT##/../meta-rust \
   ##OEROOT##/../meta-citadel \
   ##OEROOT##/../meta-gnome \
-  ##OEROOT##/../meta-clang \
   "

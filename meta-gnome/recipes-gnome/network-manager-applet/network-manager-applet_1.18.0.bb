@@ -1,5 +1,5 @@
 SUMMARY = "GTK+ applet for NetworkManager"
-LICENSE = "GPLv2"
+LICENSE = "GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=b234ee4d69f5fce4486a80fdaf4a4263"
 
 DEPENDS = "gtk+3 libnma libnotify libsecret libgudev networkmanager iso-codes nss"
@@ -20,9 +20,9 @@ PACKAGECONFIG ??= ""
 PACKAGECONFIG[modemmanager] = "-Dwwan=true, -Dwwan=false, modemmanager"
 PACKAGECONFIG[selinux] = "-Dselinux=true, -Dselinux=false, libselinux"
 
-RDEPENDS_${PN} =+ "networkmanager"
+RDEPENDS:${PN} =+ "networkmanager"
 
-FILES_${PN} += " \
+FILES:${PN} += " \
     ${datadir}/nm-applet/ \
     ${datadir}/libnma/wifi.ui \
     ${datadir}/metainfo \

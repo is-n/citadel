@@ -1,6 +1,6 @@
 SUMMARY = "Default GNOME desktop background images"
 
-LICENSE = "GPLv2"
+LICENSE = "GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=75859989545e37968a99b631ef42722e"
 
 GNOMEBASEBUILDCLASS = "meson"
@@ -13,7 +13,7 @@ SRC_URI = "${GNOME_MIRROR}/${GNOMEBN}/${@gnome_verdir("${PV}")}/${GNOMEBN}-${PV}
 
 SRC_URI[archive.sha256sum] = "1da1ac0d261bedf0fcd2c85b480bc65505e23cf51f1143126c0d37717e693145"
 
-FILES_${PN} += "\
+FILES:${PN} += "\
     ${datadir}/backgrounds/gnome \
     ${datadir}/gnome-background-properties \
 "

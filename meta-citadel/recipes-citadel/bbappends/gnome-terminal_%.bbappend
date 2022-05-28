@@ -1,4 +1,4 @@
-FILESEXTRAPATHS_prepend := "${THISDIR}/gnome-terminal:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/gnome-terminal:"
 
 SRC_URI += "\
     file://gnome-terminal-citadel.service \
@@ -7,7 +7,7 @@ SRC_URI += "\
     file://50_gnome-terminal.gschema.override \
 "
 
-do_install_append() {
+do_install:append() {
     install -m 644 ${WORKDIR}/50_gnome-terminal.gschema.override ${D}${datadir}/glib-2.0/schemas
     install -m 644 ${WORKDIR}/org.gnome.TerminalCitadel.desktop ${D}${datadir}/applications
     install -m 644 ${WORKDIR}/org.gnome.TerminalCitadel.service ${D}${datadir}/dbus-1/services

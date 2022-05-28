@@ -1,5 +1,5 @@
 SUMMARY = "Exif, Iptc and XMP metadata manipulation library and tools"
-LICENSE = "GPLv2"
+LICENSE = "GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=625f055f41728f84a8d7938acc35bdc2"
 
 DEPENDS = "zlib expat"
@@ -12,8 +12,8 @@ inherit cmake gettext
 
 S = "${WORKDIR}/${BPN}-trunk"
 
-INSANE_SKIP_${PN} = "useless-rpaths"
+INSANE_SKIP:${PN} = "useless-rpaths"
 
-do_install_preend() {
+do_install:preend() {
     install -d ${D}${mandir}
 }

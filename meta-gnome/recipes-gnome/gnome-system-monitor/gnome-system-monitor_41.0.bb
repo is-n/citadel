@@ -1,5 +1,5 @@
 SUMMARY = "Gnome system monitor"
-LICENSE = "GPLv2"
+LICENSE = "GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=751419260aa954499f7abaabaa882bbe"
 
 DEPENDS = " \
@@ -27,9 +27,9 @@ SRC_URI[archive.sha256sum] = "c7fc44c61949b794b0289968ebbbcc0c15f8cfc3d9e45bfaa8
 PACKAGECONFIG ??= "${@bb.utils.filter('DISTRO_FEATURES', 'systemd', d)}"
 PACKAGECONFIG[systemd] = "-Dsystemd=true, -Dsystemd=false, systemd"
 
-RRECOMMENDS_${PN} = "adwaita-icon-theme"
+RRECOMMENDS:${PN} = "adwaita-icon-theme"
 
-FILES_${PN} += " \
+FILES:${PN} += " \
     ${datadir}/dbus-1 \
     ${datadir}/metainfo \
 "

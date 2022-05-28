@@ -1,9 +1,9 @@
-LICENSE = "GPLv2" 
+LICENSE = "GPL-2.0-only" 
 LIC_FILES_CHKSUM = "file://COPYING;md5=b234ee4d69f5fce4486a80fdaf4a4263"
 
 REQUIRED_DISTRO_FEATURES = "x11 systemd pam"
 
-ERROR_QA_remove = "unknown-configure-option"
+GIR_MESON_OPTION = ""
 
 SRCREV = "d85bd654a3c830a8c3982286c1876321c96faf7d"
 
@@ -23,7 +23,7 @@ DEPENDS = " \
     mutter \
     gcr \
     gjs \
-    mozjs78 \
+    mozjs-91 \
     network-manager-applet \
     gnome-autoar \
     polkit \
@@ -33,9 +33,9 @@ DEPENDS = " \
     gsettings-desktop-schemas \
 "
 
-RDEPENDS_${PN} = "gsettings-desktop-schemas librsvg-gtk"
+RDEPENDS:${PN} = "gsettings-desktop-schemas librsvg-gtk"
 
-FILES_${PN} += "\
+FILES:${PN} += "\
     ${datadir}/dbus-1 \
     ${datadir}/xdg-desktop-portal \
     ${datadir}/gnome-control-center  \
@@ -44,16 +44,16 @@ FILES_${PN} += "\
 "
 
 PACKAGES =+ "${PN}-tools"
-FILES_${PN}-tools += "\
+FILES:${PN}-tools += "\
     /usr/bin/gnome-shell-perf-tool \
     /usr/bin/gnome-shell-extension-tool \
 "
 
-do_compile_prepend() {
+do_compile:prepend() {
     rm -f ${B}/data/theme/*.css
 }
 
-do_configure_append () {
+do_configure:append () {
     MUTTER_DIR="/usr/lib/mutter"
     sed --in-place=.old1 "s;=${MUTTER_DIR};=${PKG_CONFIG_SYSROOT_DIR}${MUTTER_DIR};" ${B}/build.ninja
 }

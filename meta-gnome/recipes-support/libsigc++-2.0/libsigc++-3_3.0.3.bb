@@ -1,6 +1,6 @@
 SUMMARY = "A library for loose coupling of C++ method calls"
 SECTION = "libs"
-LICENSE = "LGPLv3"
+LICENSE = "LGPL-3.0-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=959bffe2993816eb32ec4bc1ec1d5875"
 
 DEPENDS = "mm-common"
@@ -13,8 +13,8 @@ S = "${WORKDIR}/libsigc++-${PV}"
 
 inherit setuptools3 meson
 
-FILES_${PN}-dev += "${libdir}/sigc++-*/"
-FILES_${PN}-doc += "${datadir}/devhelp"
+FILES:${PN}-dev += "${libdir}/sigc++-*/"
+FILES:${PN}-doc += "${datadir}/devhelp"
 
 BBCLASSEXTEND = "native"
 SECURITY_CFLAGS = "${SECURITY_NO_PIE_CFLAGS}"

@@ -2,7 +2,7 @@ require wireguard.inc
 
 SRCREV = "122f06bfd8fc7b06a0899fa9adc4ce8e06900d98"
 
-SRC_URI = "git://git.zx2c4.com/wireguard-linux-compat"
+SRC_URI = "git://git.zx2c4.com/wireguard-linux-compat;branch=master"
 
 inherit module kernel-module-split
 
@@ -12,13 +12,13 @@ DEPENDS = "virtual/kernel libmnl"
 # configuration options. For exact kernel requirements visit:
 # https://www.wireguard.io/install/#kernel-requirements
 
-EXTRA_OEMAKE_append = " \
+EXTRA_OEMAKE:append = " \
     KERNELDIR=${STAGING_KERNEL_DIR} \
     "
 
 MAKE_TARGETS = "module"
 
-RRECOMMENDS_${PN} = "kernel-module-xt-hashlimit"
+RRECOMMENDS:${PN} = "kernel-module-xt-hashlimit"
 MODULE_NAME = "wireguard"
 
 module_do_install() {

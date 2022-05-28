@@ -3,13 +3,13 @@ HOMEPAGE = "http://github.com/subgraph/citadel"
 LICENSE = "CLOSED"
 LIC_FILES_CHKSUM=""
 
-inherit cargo systemd
+inherit cargo systemd pkgconfig
 #
 # Update this when changes are pushed to github
 #
 SRCREV = "32b4b0886a2a1872b4b7a2d36236daf0b94578d6"
 
-SRC_URI = "git://github.com/subgraph/sgmenu.git;protocol=https"
+SRC_URI = "git://github.com/subgraph/sgmenu.git;protocol=https;branch=master"
 
 S = "${WORKDIR}/git"
 

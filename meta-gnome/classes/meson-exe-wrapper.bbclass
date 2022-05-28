@@ -20,6 +20,6 @@ exe_wrapper = '${B}/wrapper'" > ${WORKDIR}/meson.cross.tmp
     fi
 }
 
-do_configure_prepend() {
+do_configure:prepend() {
     setup_wrapper
 }

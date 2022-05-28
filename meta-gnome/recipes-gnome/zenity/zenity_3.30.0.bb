@@ -1,5 +1,5 @@
 SUMMARY = "GNOME port of Dialog to display dialog boxes from shell scripts"
-LICENSE = "LGPLv2"
+LICENSE = "LGPL-2.0-only"
 LIC_FILES_CHKSUM = "file://COPYING;md5=3bf50002aefd002f49e7bb854063f7e7"
 
 inherit gnomebase gtk-icon-cache gconf mime perlnative gettext
