@@ -1,6 +1,6 @@
-From 408e0ab8df0b7e98b642228a91ac1072196df36b Mon Sep 17 00:00:00 2001
+From 34269016c3d438e2f84119c779ebdcf032307ed4 Mon Sep 17 00:00:00 2001
 From: Bruce Leidl <bruce@subgraph.com>
-Date: Wed, 6 Oct 2021 14:28:02 -0400
+Date: Fri, 27 May 2022 15:06:26 -0400
 Subject: [PATCH] Add options for Citadel and disabling GOA/CUPS
 
 ---
@@ -14,12 +14,12 @@ Subject: [PATCH] Add options for Citadel and disabling GOA/CUPS
  7 files changed, 81 insertions(+), 9 deletions(-)
 
 diff --git a/meson.build b/meson.build
-index 1ee69c5..a5a5243 100644
+index 09aa30f..7835bc7 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -114,6 +114,15 @@ if not libhandy_dep.found()
-   libhandy_dep = libhandy.get_variable('libhandy_dep')
- endif
+@@ -99,6 +99,15 @@ libgvc = subproject(
+ )
+ libgvc_dep = libgvc.get_variable('libgvc_dep')
  
 +enable_goa = get_option('online_accounts')
 +enable_cups = get_option('cups')
@@ -33,18 +33,18 @@ index 1ee69c5..a5a5243 100644
  goa_req_version = '>= 3.25.3'
  pulse_req_version = '>= 2.0'
  
-@@ -124,7 +133,9 @@ gio_dep = dependency('gio-2.0')
- glib_dep = dependency('glib-2.0', version: '>= 2.68.0')
- gnome_desktop_dep = dependency('gnome-desktop-3.0', version: '>= 3.33.4')
- gnome_settings_dep = dependency('gnome-settings-daemon', version: '>= 3.27.90')
+@@ -118,7 +127,9 @@ gnome_desktop_dep = dependency('gnome-desktop-4')
+ gnome_bg_dep = dependency('gnome-bg-4')
+ gnome_rr_dep = dependency('gnome-rr-4')
+ gnome_settings_dep = dependency('gnome-settings-daemon', version: '>= 41.0')
 +if enable_goa
  goa_dep = dependency('goa-1.0', version: goa_req_version)
 +endif
- gsettings_desktop_dep = dependency('gsettings-desktop-schemas', version: '>= 40.alpha')
+ gsettings_desktop_dep = dependency('gsettings-desktop-schemas', version: '>= 42.alpha')
  libxml_dep = dependency('libxml-2.0')
- polkit_gobject_dep = dependency('polkit-gobject-1', version: '>= 0.114')
-@@ -149,6 +160,8 @@ common_deps = [
- ]
+ pulse_dep = dependency('libpulse', version: pulse_req_version)
+@@ -153,6 +164,8 @@ foreach polkit_file: polkit_files
+ endforeach
  
  # Check for CUPS 1.4 or newer
 +
@@ -52,19 +52,19 @@ index 1ee69c5..a5a5243 100644
  cups_dep = dependency('cups', version : '>= 1.4', required: false)
  assert(cups_dep.found(), 'CUPS 1.4 or newer not found')
  
-@@ -171,6 +184,7 @@ endforeach
+@@ -175,6 +188,7 @@ endforeach
  config_h.set10('HAVE_CUPS_HTTPCONNECT2',
                 cc.has_function('httpConnect2', dependencies: cups_dep),
                 description: 'Define if httpConnect2() is available in CUPS')
 +endif
  
- # Optional dependency for the user accounts panel
- enable_cheese = get_option('cheese')
+ # IBus support
+ enable_ibus = get_option('ibus')
 diff --git a/meson_options.txt b/meson_options.txt
-index 1b7b548..8dd1b33 100644
+index dbca723..1f65b82 100644
 --- a/meson_options.txt
 +++ b/meson_options.txt
-@@ -8,3 +8,8 @@ option('tracing', type: 'boolean', value: false, description: 'add extra debuggi
+@@ -7,3 +7,8 @@ option('tracing', type: 'boolean', value: false, description: 'add extra debuggi
  option('wayland', type: 'boolean', value: true, description: 'build with Wayland support')
  option('profile', type: 'combo', choices: ['default','development'], value: 'default')
  option('malcontent', type: 'boolean', value: false, description: 'build with malcontent support')
@@ -73,25 +73,8 @@ index 1b7b548..8dd1b33 100644
 +option('cups', type: 'boolean', value: false, description: 'build with support for CUPS')
 +option('user_accounts', type: 'boolean', value: false, description: 'build with support for user accounts panel')
 +option('citadel', type: 'boolean', value: true, description: 'build with Citadel support, which removes unneeded components')
-diff --git a/panels/background/meson.build b/panels/background/meson.build
-index eb5e9ec..ee52d12 100644
---- a/panels/background/meson.build
-+++ b/panels/background/meson.build
-@@ -34,9 +34,11 @@ install_data(
- 
- common_sources = []
- 
-+staging = get_option('staging_dir')
-+
- enums = 'gdesktop-enums-types'
- enums_header = files(
--  gsettings_desktop_dep.get_pkgconfig_variable('prefix') + '/include/gsettings-desktop-schemas/gdesktop-enums.h',
-+  staging + gsettings_desktop_dep.get_pkgconfig_variable('prefix') + '/include/gsettings-desktop-schemas/gdesktop-enums.h',
-   'cc-background-item.h'
- )
- 
 diff --git a/panels/meson.build b/panels/meson.build
-index f603db9..943210f 100644
+index 75941ed..b3fe923 100644
 --- a/panels/meson.build
 +++ b/panels/meson.build
 @@ -1,12 +1,10 @@
@@ -122,7 +105,7 @@ index f603db9..943210f 100644
    'universal-access',
    'usage',
 -  'user-accounts',
-   'wwan',
+  'wwan',
  ]
  
 @@ -43,6 +36,22 @@ if host_is_linux_not_s390
@@ -149,10 +132,10 @@ index f603db9..943210f 100644
  panels_libs = []
  foreach cappletname: panels
 diff --git a/shell/cc-panel-list.c b/shell/cc-panel-list.c
-index c5532ba..75be10d 100644
+index 6cbc16b..41d6722 100644
 --- a/shell/cc-panel-list.c
 +++ b/shell/cc-panel-list.c
-@@ -388,10 +388,16 @@ static const gchar * const panel_order[] = {
+@@ -385,10 +385,16 @@ static const gchar * const panel_order[] = {
    "notifications",
    "search",
    "multitasking",
@@ -169,7 +152,7 @@ index c5532ba..75be10d 100644
  
    /* Privacy page */
    "location",
-@@ -408,16 +414,24 @@ static const gchar * const panel_order[] = {
+@@ -405,16 +411,24 @@ static const gchar * const panel_order[] = {
    "display",
    "mouse",
    "keyboard",
@@ -195,7 +178,7 @@ index c5532ba..75be10d 100644
    "datetime",
    "info-overview",
 diff --git a/shell/cc-panel-loader.c b/shell/cc-panel-loader.c
-index 67f3f1b..4b595af 100644
+index 66c513e..97eea5b 100644
 --- a/shell/cc-panel-loader.c
 +++ b/shell/cc-panel-loader.c
 @@ -31,14 +31,18 @@

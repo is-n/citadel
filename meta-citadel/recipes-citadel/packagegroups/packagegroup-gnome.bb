@@ -5,7 +5,6 @@ inherit packagegroup
 RDEPENDS:${PN} = "\
     atk \
     at-spi2-atk \
-    libgweather \
     zenity \
     gnome-desktop \
     gnome-bluetooth \

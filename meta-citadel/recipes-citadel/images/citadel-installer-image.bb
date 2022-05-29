@@ -98,9 +98,8 @@ install_resource_image() {
     version=$(printf "%03d" ${2})
 
     if [ "${1}" = "kernel" ]; then
-        kversion=$(cat ${DEPLOY_DIR_IMAGE}/kernel.version)
-        src_fname="citadel-kernel-${kversion}-${CITADEL_IMAGE_CHANNEL}-${version}.img"
-        dst_fname="citadel-kernel-${kversion}.img"
+        src_fname="citadel-kernel-${CITADEL_KERNEL_VERSION}-${CITADEL_IMAGE_CHANNEL}-${version}.img"
+        dst_fname="citadel-kernel-${CITADEL_KERNEL_VERSION}.img"
     else
         src_fname="citadel-${1}-${CITADEL_IMAGE_CHANNEL}-${version}.img"
         dst_fname="citadel-${1}.img"

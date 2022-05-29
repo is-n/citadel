@@ -1,6 +1,6 @@
-From 77e6fdd36bdc562e42da57c5a753b885d57eea85 Mon Sep 17 00:00:00 2001
-From: David McKinney <mckinney@subgraph.com>
-Date: Fri, 12 Feb 2021 13:57:01 +0000
+From 87a40c18adf3305f8b82679cc80b544158b566f9 Mon Sep 17 00:00:00 2001
+From: Bruce Leidl <bruce@subgraph.com>
+Date: Fri, 27 May 2022 14:51:48 -0400
 Subject: [PATCH] Patch locking logout so it does not disable shutting down
 
 ---
@@ -8,10 +8,10 @@ Subject: [PATCH] Patch locking logout so it does not disable shutting down
  1 file changed, 7 insertions(+), 8 deletions(-)
 
 diff --git a/gnome-session/gsm-manager.c b/gnome-session/gsm-manager.c
-index 6839a02..4c2e862 100644
+index 1b88b26..fb3f2ec 100644
 --- a/gnome-session/gsm-manager.c
 +++ b/gnome-session/gsm-manager.c
-@@ -553,10 +553,10 @@ end_phase (GsmManager *manager)
+@@ -560,10 +560,10 @@ end_phase (GsmManager *manager)
          case GSM_MANAGER_PHASE_APPLICATION:
                  break;
          case GSM_MANAGER_PHASE_RUNNING:
@@ -24,7 +24,7 @@ index 6839a02..4c2e862 100644
                  break;
          case GSM_MANAGER_PHASE_QUERY_END_SESSION:
                  if (!do_query_end_session_exit (manager))
-@@ -2555,13 +2555,13 @@ gsm_manager_shutdown (GsmExportedManager    *skeleton,
+@@ -2633,13 +2633,13 @@ gsm_manager_shutdown (GsmExportedManager    *skeleton,
                  return TRUE;
          }
  
@@ -38,9 +38,9 @@ index 6839a02..4c2e862 100644
 -        }
 +        }*/
  
-         task = g_task_new (manager, manager->priv->end_session_cancellable, (GAsyncReadyCallback) complete_end_session_task, invocation);
+         task = g_task_new (manager, priv->end_session_cancellable, (GAsyncReadyCallback) complete_end_session_task, invocation);
  
-@@ -2590,13 +2590,13 @@ gsm_manager_reboot (GsmExportedManager    *skeleton,
+@@ -2669,13 +2669,13 @@ gsm_manager_reboot (GsmExportedManager    *skeleton,
                  return TRUE;
          }
  
@@ -54,15 +54,15 @@ index 6839a02..4c2e862 100644
 -        }
 +        }*/
  
-         task = g_task_new (manager, manager->priv->end_session_cancellable, (GAsyncReadyCallback) complete_end_session_task, invocation);
+         task = g_task_new (manager, priv->end_session_cancellable, (GAsyncReadyCallback) complete_end_session_task, invocation);
  
-@@ -2617,8 +2617,7 @@ gsm_manager_can_shutdown (GsmExportedManager    *skeleton,
+@@ -2697,8 +2697,7 @@ gsm_manager_can_shutdown (GsmExportedManager    *skeleton,
  
          g_debug ("GsmManager: CanShutdown called");
  
 -        shutdown_available = !_log_out_is_locked_down (manager) &&
--                (gsm_system_can_stop (manager->priv->system)
-+        shutdown_available = (gsm_system_can_stop (manager->priv->system)
-                  || gsm_system_can_restart (manager->priv->system)
-                  || gsm_system_can_suspend (manager->priv->system)
-                  || gsm_system_can_hibernate (manager->priv->system));
+-                (gsm_system_can_stop (priv->system)
++        shutdown_available = (gsm_system_can_stop (priv->system)
+                  || gsm_system_can_restart (priv->system)
+                  || gsm_system_can_suspend (priv->system)
+                  || gsm_system_can_hibernate (priv->system));
