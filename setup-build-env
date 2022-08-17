@@ -15,4 +15,3 @@ fi
 
 TEMPLATECONF=../meta-citadel/conf
 . poky/oe-init-build-env
-

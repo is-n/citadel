@@ -1,4 +1,4 @@
-FROM debian:buster
+FROM debian:bookworm-20220622
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -14,7 +14,10 @@ RUN apt update && apt install -y gawk \
     chrpath \
     socat \
     cpio \
-    python \
+    file \
+    lz4 \
+    zstd \
+    python-is-python3 \
     python3 \
     python3-pip \
     python3-pexpect \
