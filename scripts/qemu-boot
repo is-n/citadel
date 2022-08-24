@@ -5,12 +5,12 @@ EXTRA_KERNEL_CMDLINE=""
 SCRIPT=$(realpath ${BASH_SOURCE})
 BUILD_ROOT=$(realpath $(dirname ${SCRIPT})/../build)
 SYSROOT=${BUILD_ROOT}/tmp-glibc/work/x86_64-linux/qemu-helper-native/1.0-r1/recipe-sysroot-native
-QEMU=${SYSROOT}/usr/bin/qemu-system-x86_64
+QEMU=qemu-system-x86_64
 
-if [[ ! -f ${QEMU} ]]; then
-    >&2 printf "Qemu binary not found at: ${QEMU}\n"
-    exit 1
-fi
+# if [[ ! -f ${QEMU} ]]; then
+#     >&2 printf "Qemu binary not found at: ${QEMU}\n"
+#     exit 1
+# fi
 
 ENABLE_KVM="--enable-kvm -cpu host"
 
@@ -19,9 +19,14 @@ if [[ ! -c "/dev/kvm" ]]; then
     ENABLE_KVM=""
 fi
 
-EFI_BIOS="-bios /usr/share/qemu/OVMF.fd" 
-if [[ ! -f "/usr/share/qemu/OVMF.fd" ]]; then
-    printf "Disabling EFI boot because OVMF.fd not found in /usr/share/qemu\n"
+if [[ -f "/usr/share/qemu/OVMF.fd" ]]; then
+    printf "Using EFI boot because OVMF.fd found in /usr/share/qemu/\n"
+    EFI_BIOS="-bios /usr/share/qemu/OVMF.fd"
+elif [[ -f "/usr/share/edk2-ovmf/x64/OVMF.fd" ]]; then
+  printf "Using EFI boot because OVMF.fd found in /usr/share/edk2-ovmf/x64/\n"
+    EFI_BIOS="-bios /usr/share/edk2-ovmf/x64/OVMF.fd"
+else
+    printf "Disabling EFI boot because OVMF.fd not found\n"
     EFI_BIOS=""
 fi
 
@@ -43,8 +48,8 @@ exit 0
 }
 
 BOOT_TARGET=""
-MEMORY_ARG="-m 4G"
-DEBUG_MODE=0
+MEMORY_ARG="-m 8G"
+DEBUG_MODE=1
 
 while [[ $# -gt 0 ]]; do
     key=${1}
@@ -68,6 +73,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         installer)
             BOOT_TARGET="installer"
+            shift
+            ;;
+        test)
+            BOOT_TARGET="test"
             shift
             ;;
         --help)
@@ -97,7 +106,7 @@ boot_installer() {
         -kernel ${BUILD_ROOT}/images/bzImage \
         -append "console=ttyS0 earlyprintk=ttyS0 root=/dev/mapper/rootfs citadel.verbose citadel.install fstab=no luks=no systemd.journald.forward_to_console=1 ${EXTRA_KERNEL_CMDLINE}"
     else
-        ${QEMU} ${COMMON_INSTALLER_ARGS} 
+        ${QEMU} ${COMMON_INSTALLER_ARGS}
     fi
 }
 
@@ -120,11 +129,35 @@ boot_kernel() {
         -kernel ${BUILD_ROOT}/images/${KERNEL_IMAGE}
 }
 
+test() {
+    COMMON_INSTALLER_ARGS="\
+        ${ENABLE_KVM} \
+        ${MEMORY_ARG} \
+        ${EFI_BIOS} \
+        -device virtio-vga-gl \
+        -display sdl,gl=on \
+        -usb -device usb-tablet,id=input0 \
+        -drive format=raw,file=${BUILD_ROOT}/../working_citadel_disk/citadel-installer.img \
+        -nic user,model=virtio-net-pci \
+        -smp 4 \
+        -virtfs local,path=/home/sea/citadel-tools,mount_tag=shared,security_model=mapped-xattr,id=host0 \
+        -drive format=qcow2,file=${BUILD_ROOT}/../qemu_disk/citadel_disk.qcow2" \
+
+
+    if [[ ${DEBUG_MODE} -eq 1 ]]; then
+    ${QEMU} ${COMMON_INSTALLER_ARGS} \
+        -serial stdio
+    else
+        ${QEMU} ${COMMON_INSTALLER_ARGS}
+    fi
+}
+
 if [[ ${BOOT_TARGET} = "kernel" ]]; then
     boot_kernel
 elif [[ ${BOOT_TARGET} = "installer" ]]; then
     boot_installer
+elif [[ ${BOOT_TARGET} = "test" ]]; then
+    test
 else
     usage
 fi
-
