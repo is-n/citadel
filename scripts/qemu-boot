@@ -79,6 +79,10 @@ while [[ $# -gt 0 ]]; do
             BOOT_TARGET="test"
             shift
             ;;
+        boot_installed)
+            BOOT_TARGET="boot_installed"
+            shift
+            ;;
         --help)
             usage
             ;;
@@ -89,17 +93,19 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-COMMON_INSTALLER_ARGS="\
-    ${ENABLE_KVM} \
-    ${MEMORY_ARG} \
-    ${EFI_BIOS} \
-    -vga virtio \
-    -usb -device usb-tablet,id=input0 \
-    -drive format=raw,file=${BUILD_ROOT}/images/citadel-installer.img \
-    -net none \
-    -smp 2"
+
 
 boot_installer() {
+  COMMON_INSTALLER_ARGS="\
+      ${ENABLE_KVM} \
+      ${MEMORY_ARG} \
+      ${EFI_BIOS} \
+      -vga virtio \
+      -usb -device usb-tablet,id=input0 \
+      -drive format=raw,file=${BUILD_ROOT}/images/citadel-installer.img \
+      -net none \
+      -smp 2"
+
     if [[ ${DEBUG_MODE} -eq 1 ]]; then
     ${QEMU} ${COMMON_INSTALLER_ARGS} \
         -serial stdio \
@@ -129,6 +135,8 @@ boot_kernel() {
         -kernel ${BUILD_ROOT}/images/${KERNEL_IMAGE}
 }
 
+# qemu-img create -f qcow2 vdisk2 -o size=50G,preallocation=metadata
+# mount -t 9p -o trans=virtio,version=9p2000.L shared /mnt/my9p
 test() {
     COMMON_INSTALLER_ARGS="\
         ${ENABLE_KVM} \
@@ -136,8 +144,9 @@ test() {
         ${EFI_BIOS} \
         -device virtio-vga-gl \
         -display sdl,gl=on \
+        -vga none \
         -usb -device usb-tablet,id=input0 \
-        -drive format=raw,file=${BUILD_ROOT}/../working_citadel_disk/citadel-installer.img \
+        -drive format=raw,file=${BUILD_ROOT}/images/citadel-installer.img \
         -nic user,model=virtio-net-pci \
         -smp 4 \
         -virtfs local,path=/home/sea/citadel-tools,mount_tag=shared,security_model=mapped-xattr,id=host0 \
@@ -152,12 +161,37 @@ test() {
     fi
 }
 
+boot_installed() {
+  echo ${COMMON_INSTALLER_ARGS}
+    COMMON_INSTALLER_ARGS="\
+        ${ENABLE_KVM} \
+        ${MEMORY_ARG} \
+        ${EFI_BIOS} \
+        -vga none \
+        -device virtio-vga-gl \
+        -display sdl,gl=on \
+        -smp 4 \
+        -virtfs local,path=/home/sea/citadel-tools,mount_tag=shared,security_model=mapped-xattr,id=host0 \
+        -device virtio-serial-pci \
+        -drive format=qcow2,file=${BUILD_ROOT}/../qemu_disk/citadel_disk.qcow2" \
+
+
+    if [[ ${DEBUG_MODE} -eq 1 ]]; then
+    ${QEMU} ${COMMON_INSTALLER_ARGS} \
+        -serial stdio \
+    else
+        ${QEMU} ${COMMON_INSTALLER_ARGS}
+    fi
+}
+
 if [[ ${BOOT_TARGET} = "kernel" ]]; then
     boot_kernel
 elif [[ ${BOOT_TARGET} = "installer" ]]; then
     boot_installer
 elif [[ ${BOOT_TARGET} = "test" ]]; then
     test
+elif [[ ${BOOT_TARGET} = "boot_installed" ]]; then
+    boot_installed
 else
     usage
 fi
