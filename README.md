@@ -78,7 +78,7 @@ disk you want to install to. You can even use the usb disk you booted the instal
 # Reproducible builds
 
 Citadel is configured to reproducibly build artifacts. At this stage, we are
-not yet at 100% reprodubility. We have included a script to track the gaps
+not yet at 100% reproducibility. We have included a script to track the gaps
 in reproducibility.
 
 This requires performing two independent builds of Citadel (preferably on the
