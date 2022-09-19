@@ -37,7 +37,7 @@ DEPENDS = " \
 
 RDEPENDS:${PN} += " xwayland zenity"
 
-SRCREV = "56e7b774e9a2ea215d02cb1ac88a8cfa74b5a4a6"
+SRCREV = "3d11fd8cc0a3d64071ac1cdec34aabd795fe6a5d"
 
 EXTERNAL_TREE_VAR="CITADEL_MUTTER_PATH"
 GIT_URI = "git://github.com/brl/mutter.git;branch=citadel-42.1;protocol=https"

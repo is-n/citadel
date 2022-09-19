@@ -6,7 +6,7 @@ REQUIRED_DISTRO_FEATURES = "x11 systemd pam"
 GIR_MESON_OPTION = ""
 GTKIC_VERSION = "4"
 
-SRCREV = "3f794cbe00f3947335a57c1139c8eb3fc617ffb7"
+SRCREV = "2f4a1ed647467f3342094394be1443bf3d94dc20"
 
 EXTERNAL_TREE_VAR="CITADEL_GNOME_SHELL_PATH"
 GIT_URI = "gitsm://github.com/brl/gnome-shell.git;branch=citadel-42.1;protocol=https"
