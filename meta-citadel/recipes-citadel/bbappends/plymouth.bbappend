@@ -1,2 +1,2 @@
-PACKAGECONFIG = "pango drm"
+PACKAGECONFIG = "pango drm gtk"
 

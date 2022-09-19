@@ -14,4 +14,5 @@ do_install:append() {
     install -m 644 ${WORKDIR}/watch-resolvconf.path ${D}${systemd_system_unitdir}
     install -m 644 ${WORKDIR}/watch-resolvconf.service ${D}${systemd_system_unitdir}
 }
-PACKAGECONFIG = "nss systemd polkit wifi iwd vala"
+PACKAGECONFIG = "nss systemd polkit wifi iwd vala nmcli bluez5"
+NETWORKMANAGER_FIREWALL_DEFAULT = "iptables"
