@@ -8,7 +8,7 @@ inherit cargo systemd gsettings pkgconfig
 #
 # Update this when changes are pushed to github
 #
-SRCREV = "3dbfda2c40aac28e2a1df1dddae039113df1c6f0"
+SRCREV = "c79ff22a987ea5c9621db88df5ec638439011b3e"
 
 GIT_URI = "git://github.com/brl/citadel-tools.git;protocol=https;branch=master"
 
@@ -56,6 +56,7 @@ SRC_URI += " \
     crate://crates.io/clap/2.34.0 \
     crate://crates.io/concurrent-queue/1.2.2 \
     crate://crates.io/cpufeatures/0.2.2 \
+    crate://crates.io/crc32fast/1.3.2 \
     crate://crates.io/crossbeam-channel/0.3.9 \
     crate://crates.io/crossbeam-utils/0.6.6 \
     crate://crates.io/crypto-mac/0.8.0 \
@@ -79,6 +80,7 @@ SRC_URI += " \
     crate://crates.io/failure_derive/0.1.8 \
     crate://crates.io/fastrand/1.7.0 \
     crate://crates.io/field-offset/0.3.4 \
+    crate://crates.io/flate2/1.0.24 \
     crate://crates.io/futures-channel/0.3.21 \
     crate://crates.io/futures-core/0.3.21 \
     crate://crates.io/futures-executor/0.3.21 \
@@ -159,6 +161,7 @@ SRC_URI += " \
     crate://crates.io/proc-macro-error/1.0.4 \
     crate://crates.io/proc-macro2/0.4.30 \
     crate://crates.io/proc-macro2/1.0.39 \
+    crate://crates.io/procfs/0.12.0 \
     crate://crates.io/pwhash/0.3.1 \
     crate://crates.io/quote/0.6.13 \
     crate://crates.io/quote/1.0.18 \
