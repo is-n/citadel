@@ -10,3 +10,6 @@
 [submodule "meta-clang"]
 	path = meta-clang
 	url = https://github.com/kraj/meta-clang
+[submodules "citadel-tools"]
+	path = citadel-tools
+	url = https://github.com/is-n/citadel-tools
