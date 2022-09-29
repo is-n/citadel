@@ -6,7 +6,7 @@ LIC_FILES_CHKSUM = "file://COPYING;md5=8335471e369a410f354d5179fdcf0195 \
 SRC_URI = "git://github.com/snwh/paper-icon-theme.git;protocol=https;branch=master \
                 file://index.theme \
                 "
-SRCREV = "7860fba850fc7f9aed83b1abd804169e816005cd"
+SRCREV = "aa3e8af7a1f0831a51fd7e638a4acb077a1e5188"
 
 S = "${WORKDIR}/git"
 

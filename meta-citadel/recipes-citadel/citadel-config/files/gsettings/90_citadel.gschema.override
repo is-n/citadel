@@ -3,7 +3,8 @@ natural-scroll=true
 tap-to-click=true
 
 [org.gnome.desktop.background]
-picture-uri='file:///usr/share/backgrounds/gnome/Loveles.jpg'
+picture-uri='file:///usr/share/backgrounds/gnome/truchet-l.jpg'
+picture-uri-dark='file:///usr/share/backgrounds/gnome/truchet-d.jpg'
 
 [org.gnome.desktop.screensaver]
 picture-uri='file:////usr/share/gnome-control-center/pixmaps/noise-texture-light.png'
@@ -25,6 +26,7 @@ cursor-theme='Paper'
 icon-theme='Paper'
 gtk-enable-primary-paste=false
 clock-format='12h'
+color-scheme='prefer-dark'
 
 [org.gnome.shell]
 enabled-extensions=['dash-to-panel@jderose9.github.com']

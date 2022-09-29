@@ -17,14 +17,15 @@ DEPENDS:append:libc-musl = " musl-rpmatch"
 PROVIDES = "virtual/psplash"
 RPROVIDES:${PN} = "virtual-psplash virtual-psplash-support"
 
-SRCREV = "e55447500fa95a0cc59c741296030ed91a2986dc"
+SRCREV = "e96011133a2ac44ee2a42fb8231144c4c799151d"
 SRC_URI = " \
     git://gitlab.freedesktop.org/plymouth/plymouth.git;branch=main;protocol=https \
     file://0001-Make-full-path-to-systemd-tty-ask-password-agent-con.patch \
+    file://plymouthd.conf \
         "
 S = "${WORKDIR}/git"
 
-EXTRA_OECONF += " --enable-shared --disable-static --disable-gtk --disable-documentation \
+EXTRA_OECONF += " --enable-shared --disable-static --disable-documentation \
     --with-logo=${LOGO} \
     ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', '--enable-systemd-integration --with-systemd-tty-ask-password-agent=${base_bindir}/systemd-tty-ask-password-agent', '--disable-systemd-integration', d)} \
     ${@bb.utils.contains('DISTRO_FEATURES', 'usrmerge','--without-system-root-install','--with-system-root-install',d)} \
@@ -52,6 +53,8 @@ do_install:append() {
     if ! ${@bb.utils.contains('PACKAGECONFIG', 'initrd', 'true', 'false', d)}; then
         rm -rf "${D}${libexecdir}"
     fi
+    rm -rf ${D}/etc/plymouth/plymouthd.conf
+    install -m 644 ${WORKDIR}/plymouthd.conf ${D}/etc/plymouth/plymouthd.conf
 }
 
 do_configure:prepend() {
