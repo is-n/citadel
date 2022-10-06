@@ -13,3 +13,6 @@
 [submodules "citadel-tools"]
 	path = citadel-tools
 	url = https://github.com/is-n/citadel-tools
+[submodule "citadel-tools"]
+	path = citadel-tools
+	url = https://github.com/is-n/citadel-tools

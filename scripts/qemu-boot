@@ -149,7 +149,7 @@ test() {
         -drive format=raw,file=${BUILD_ROOT}/images/citadel-installer.img \
         -nic user,model=virtio-net-pci \
         -smp 4 \
-        -virtfs local,path=/home/sea/citadel-tools,mount_tag=shared,security_model=mapped-xattr,id=host0 \
+        -virtfs local,path=${HOME}/citadel-tools,mount_tag=shared,security_model=mapped-xattr,id=host0 \
         -drive format=qcow2,file=${BUILD_ROOT}/../qemu_disk/citadel_disk.qcow2" \
 
 
@@ -171,7 +171,7 @@ boot_installed() {
         -device virtio-vga-gl \
         -display sdl,gl=on \
         -smp 4 \
-        -virtfs local,path=/home/sea/citadel-tools,mount_tag=shared,security_model=mapped-xattr,id=host0 \
+        -virtfs local,path=${HOME}/citadel-tools,mount_tag=shared,security_model=mapped-xattr,id=host0 \
         -device virtio-serial-pci \
         -drive format=qcow2,file=${BUILD_ROOT}/../qemu_disk/citadel_disk.qcow2" \
 
