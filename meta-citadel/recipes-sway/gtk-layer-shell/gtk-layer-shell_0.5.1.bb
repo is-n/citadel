@@ -7,7 +7,9 @@ LIC_FILES_CHKSUM = "file://LICENSE_LGPL.txt;md5=3000208d539ec061b899bce1d9ce9404
                     file://test/check-licenses.py;md5=3c4fd5f6d979f739fba5d1f020f81e3e"
 
 
-SRC_URI = "git://github.com/wmww/gtk-layer-shell;protocol=https;branch=master"
+SRC_URI = "git://github.com/wmww/gtk-layer-shell;protocol=https;branch=master \
+           file://0001-Fix-wayland-scanner-for-cross-compile.patch \
+           "
 
 GIR_MESON_OPTION = ""
 

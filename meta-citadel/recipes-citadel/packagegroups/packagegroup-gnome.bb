@@ -28,5 +28,6 @@ RDEPENDS:${PN} = "\
     libdrm-amdgpu \
     dash-to-panel \
     citadel-config-gnome \
+    power-profiles-daemon \
 "
 

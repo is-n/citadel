@@ -16,9 +16,9 @@ DEPENDS = " \
             wayland-protocols \
 "
 
-SRC_URI = " \
-	git://github.com/swaywm/swaylock.git;protocol=https;branch=master \
-"
+SRC_URI = "git://github.com/swaywm/swaylock.git;protocol=https;branch=master \
+           file://0001-Fix-wayland-scanner-for-cross-compile.patch \
+           "
 
 S = "${WORKDIR}/git"
 PV = "1.6"
