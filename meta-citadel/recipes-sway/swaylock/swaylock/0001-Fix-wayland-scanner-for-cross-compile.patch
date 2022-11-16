@@ -1,0 +1,22 @@
+From c9ae85074b238151b153ab67bab6d81b48f77acf Mon Sep 17 00:00:00 2001
+From: Bruce Leidl <bruce@subgraph.com>
+Date: Fri, 23 Sep 2022 11:12:34 -0400
+Subject: [PATCH] Fix wayland-scanner for cross compile
+
+---
+ meson.build | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/meson.build b/meson.build
+index 48c43fc..5d71288 100644
+--- a/meson.build
++++ b/meson.build
+@@ -38,7 +38,7 @@ endif
+ 
+ wayland_client = dependency('wayland-client')
+ wayland_protos = dependency('wayland-protocols', version: '>=1.25', fallback: 'wayland-protocols')
+-wayland_scanner = dependency('wayland-scanner', version: '>=1.15.0')
++wayland_scanner = dependency('wayland-scanner', version: '>=1.15.0', native: true)
+ xkbcommon = dependency('xkbcommon')
+ cairo = dependency('cairo')
+ gdk_pixbuf = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))

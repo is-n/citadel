@@ -1,5 +1,7 @@
 FILESEXTRAPATHS:prepend := "${THISDIR}/gdm:"
 
+INSANE_SKIP:${PN}-src = "buildpaths"
+
 SRC_URI += "file://gdm.conf"
 DEPENDS += "plymouth"
 

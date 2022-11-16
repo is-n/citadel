@@ -1,5 +1,7 @@
 FILESEXTRAPATHS:prepend := "${THISDIR}/gnome-terminal:"
 
+INSANE_SKIP:${PN}-src = "buildpaths"
+
 SRC_URI += "\
     file://gnome-terminal-citadel.service \
     file://org.gnome.TerminalCitadel.desktop \
